@@ -1,18 +1,27 @@
 import 'package:go_router/go_router.dart';
 import 'package:saytask/view/onboarding/splash_screen.dart';
 import 'package:saytask/view/home/home_screen.dart';
-
+import '../../res/components/nab_bar.dart';
+import '../../view/auth_view/create_new_password_screen.dart';
+import '../../view/auth_view/forgot_pass_mail_screen.dart';
 import '../../view/auth_view/login_screen.dart';
+import '../../view/auth_view/otp_verification_screen.dart';
 import '../../view/auth_view/signup_screen.dart';
+import '../../view/auth_view/success_screen.dart';
 import '../../view/onboarding/onboarding_one.dart';
-import '../../view/onboarding/onboarding_three.dart';
 import '../../view/onboarding/onboarding_two.dart';
+import '../../view/onboarding/onboarding_three.dart';
+import '../../view/settings/account_management.dart';
+import '../../view/settings/delete_account_screen.dart';
+import '../../view/settings/settings_screen.dart';
+import '../../view/settings/terms_and_condition.dart';
+import '../../view/settings/update_password.dart';
 
 final GoRouter router = GoRouter(
-  initialLocation: '/',
+  initialLocation: '/home', // Changed to start with SplashScreen
   routes: [
     GoRoute(
-      path: '/',
+      path: '/splash',
       builder: (context, state) => const SplashScreen(),
     ),
     GoRoute(
@@ -36,8 +45,44 @@ final GoRouter router = GoRouter(
       builder: (context, state) => const SignupScreen(),
     ),
     GoRoute(
+      path: '/forgot_password_mail',
+      builder: (context, state) => const ForgotPassMailScreen(),
+    ),
+    GoRoute(
+      path: '/otp_verification',
+      builder: (context, state) => const OtpVerificationScreen(email: ''),
+    ),
+    GoRoute(
+      path: '/create_new_password',
+      builder: (context, state) => const CreateNewPasswordScreen(),
+    ),
+    GoRoute(
+      path: '/success',
+      builder: (context, state) => const SuccessScreen(),
+    ),
+    GoRoute(
       path: '/home',
-      builder: (context, state) => const HomeScreen(),
+      builder: (context, state) => const SmoothNavigationWrapper(initialIndex: 0), // Wrap HomeScreen
+    ),
+    GoRoute(
+      path: '/settings',
+      builder: (context, state) => const SettingsScreen(), // Wrap HomeScreen
+    ),
+    GoRoute(
+      path: '/account_management',
+      builder: (context, state) => const AccountManagementScreen(), // Wrap HomeScreen
+    ),
+    GoRoute(
+      path: '/update_password',
+      builder: (context, state) => const UpdatePassword(), // Wrap HomeScreen
+    ),
+    GoRoute(
+      path: '/delete_account',
+      builder: (context, state) => const DeleteAccountPage(), // Wrap HomeScreen
+    ),
+    GoRoute(
+      path: '/terms_and_conditions',
+      builder: (context, state) => const TermsAndCondition(), // Wrap HomeScreen
     ),
   ],
 );

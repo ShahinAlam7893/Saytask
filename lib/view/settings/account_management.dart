@@ -86,7 +86,7 @@ class AccountManagementScreen extends StatelessWidget {
                         children: [
                           _buildMenuItem(
                             title: 'About Us',
-                            onTap: () {},
+                            onTap: () {context.push('/about_us');},
                             isFirst: true,
                           ),
                           _buildDivider(),
@@ -150,7 +150,7 @@ class AccountManagementScreen extends StatelessWidget {
                           _buildDivider(),
                           _buildMenuItem(
                             title: 'Privacy & Policy',
-                            onTap: () {},
+                            onTap: () {context.push('/privacy_policy');},
                             isLast: true,
                           ),
                         ],

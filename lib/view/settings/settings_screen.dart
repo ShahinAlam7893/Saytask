@@ -91,7 +91,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ProfileCard(
                 name: 'John Doe',
                 email: 'john.doe@example.com',
-                onTap: () {},
+                onTap: () {context.push('/profile_screen');},
               ),
               SettingTile(
                 title: 'Account Management',
@@ -168,7 +168,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Buy Subscription',
+                    'Manage Subscription',
                     style: TextStyle(
                       color: AppColors.black,
                       fontSize: 16.sp,

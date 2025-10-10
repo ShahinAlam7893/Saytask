@@ -52,29 +52,6 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
               SizedBox(height: 30.h),
 
-              // Profile photo upload
-              GestureDetector(
-                onTap: _pickImage,
-                child: Column(
-                  children: [
-                    CircleAvatar(
-                      radius: 40.r,
-                      backgroundColor: Colors.grey[200],
-                      backgroundImage: _image != null ? FileImage(_image!) : null,
-                      child: _image == null
-                          ? Icon(Icons.camera_alt, size: 30.sp, color: Colors.white)
-                          : null,
-                    ),
-                    SizedBox(height: 8.h),
-                    Text(
-                      "Add photo",
-                      style: TextStyle(fontFamily: 'Inter',fontSize: 14.sp, color: AppColors.black),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 20.h),
-
               // Name field
               Align(
                 alignment: Alignment.centerLeft,
@@ -140,13 +117,13 @@ class _SignupScreenState extends State<SignupScreen> {
                       style: TextStyle(color: Colors.grey, fontSize: 14.sp),
                     ),
                     isExpanded: true,
-                    dropdownColor: Colors.white, // 👈 background color of dropdown menu
+                    dropdownColor: Colors.white,
                     style: TextStyle(
-                      color: Colors.black, // 👈 text color of menu items
+                      color: Colors.black,
                       fontSize: 14.sp,
                       fontFamily: 'Poppins',
                     ),
-                    iconEnabledColor: Colors.black, // 👈 dropdown arrow color
+                    iconEnabledColor: Colors.black,
                     onChanged: (value) => setState(() => selectedGender = value),
                     items: genders
                         .map(
@@ -155,7 +132,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         child: Text(
                           gender,
                           style: TextStyle(
-                            color: Colors.black, // 👈 text color for each item
+                            color: Colors.black,
                             fontSize: 14.sp,
                           ),
                         ),
@@ -232,7 +209,7 @@ class _SignupScreenState extends State<SignupScreen> {
               CustomButton(
                 text: "Sign up",
                 onPressed: () {
-                 context.go('/home');
+                 context.go('/login');
                 },
               ),
               SizedBox(height: 30.h),

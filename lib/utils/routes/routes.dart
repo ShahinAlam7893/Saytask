@@ -11,8 +11,11 @@ import '../../view/auth_view/success_screen.dart';
 import '../../view/onboarding/onboarding_one.dart';
 import '../../view/onboarding/onboarding_two.dart';
 import '../../view/onboarding/onboarding_three.dart';
+import '../../view/settings/about_us_screen.dart';
 import '../../view/settings/account_management.dart';
 import '../../view/settings/delete_account_screen.dart';
+import '../../view/settings/privacy_policy_screen.dart';
+import '../../view/settings/profile_screen.dart';
 import '../../view/settings/settings_screen.dart';
 import '../../view/settings/terms_and_condition.dart';
 import '../../view/settings/update_password.dart';
@@ -83,6 +86,18 @@ final GoRouter router = GoRouter(
     GoRoute(
       path: '/terms_and_conditions',
       builder: (context, state) => const TermsAndCondition(), // Wrap HomeScreen
+    ),
+    GoRoute(
+      path: '/privacy_policy',
+      builder: (context, state) => const PrivacyPolicyScreen(), // Wrap HomeScreen
+    ),
+    GoRoute(
+      path: '/about_us',
+      builder: (context, state) => const AboutUsScreen(), // Wrap HomeScreen
+    ),
+    GoRoute(
+      path: '/profile_screen',
+      builder: (context, state) => const ProfileScreen(), // Wrap HomeScreen
     ),
   ],
 );

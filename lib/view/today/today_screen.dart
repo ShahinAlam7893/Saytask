@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/svg.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -129,12 +131,23 @@ class _TodayScreenState extends State<TodayScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'saytask.',
-                style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.bold),
+              // Logo
+              SvgPicture.asset(
+                'assets/images/Saytask_logo.svg',
+                height: 24.h,
+                width: 100.w,
               ),
-              Icon(Icons.settings_outlined,
-                  size: 26.sp, color: Colors.grey[700]),
+              // Settings Icon
+              // IconButton(
+              //   icon: Icon(
+              //     Icons.settings_outlined,
+              //     color: Colors.black,
+              //     size: 24.sp,
+              //   ),
+              //   onPressed: () {
+              //     context.push('/settings');
+              //   },
+              // ),
             ],
           ),
           SizedBox(height: 16.h),

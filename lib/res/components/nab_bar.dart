@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-
+import 'package:saytask/repository/notes_service.dart';
+import 'package:saytask/view/calendar/calendar_screen.dart';
+import 'package:saytask/view/note/notes_screen.dart';
 import '../../view/home/home_screen.dart';
+import '../../view/speak_screen/speak_screen.dart';
 import '../../view/today/today_screen.dart';
 import '../color.dart';
 
@@ -28,12 +31,21 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper>
 
   List<Widget> get _pages {
     return [
-      const HomeScreen(), // Default page (index 0)
-      // Add other pages as needed
-      const TodayScreen(), // Mapped to "Today"
-      // const ChatListPage(),      // Mapped to "Speak" (placeholder functionality needed)
-      // const AvailabilityPage(),  // Mapped to "Calendar"
-      // const SettingsPage(),      // Mapped to "Notes"
+      Builder(
+        builder: (context) => const HomeScreen(),
+      ),
+      Builder(
+        builder: (context) => const TodayScreen(),
+      ),
+      Builder(
+        builder: (context) => const SpeakHomeScreen(),
+      ),
+      Builder(
+        builder: (context) => const CalendarScreen(),
+      ),
+      Builder(
+        builder: (context) => const NotesScreen(),
+      ),
     ];
   }
 
@@ -42,7 +54,6 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper>
     super.initState();
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: _currentIndex);
-
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -75,7 +86,7 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper>
   }
 
   void _onTabTapped(int index) {
-    if (_currentIndex != index && index < _pages.length) { // Safety check
+    if (_currentIndex != index && index < _pages.length) {
       setState(() {
         _currentIndex = index;
       });
@@ -84,20 +95,6 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper>
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOutCubic,
       );
-      // Optionally navigate using go_router if needed
-      // context.go(_getPathForIndex(index));
-    }
-  }
-
-  // Helper to map index to path (optional, for go_router integration)
-  String _getPathForIndex(int index) {
-    switch (index) {
-      case 0: return '/home';
-      case 1: return '/today'; // Define this route if needed
-      case 2: return '/speak'; // Define this route if needed
-      case 3: return '/calendar'; // Define this route if needed
-      case 4: return '/notes'; // Define this route if needed
-      default: return '/home';
     }
   }
 
@@ -105,9 +102,17 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper>
   Widget build(BuildContext context) {
     final pages = _pages;
 
+    // Debug provider availability
+    try {
+      context.read<NotesProvider>();
+      print('NotesProvider found in SmoothNavigationWrapper');
+    } catch (e) {
+      print('NotesProvider NOT found in SmoothNavigationWrapper: $e');
+    }
+
     return Theme(
       data: Theme.of(context).copyWith(
-        scaffoldBackgroundColor: AppColors.white, // Override background to white
+        scaffoldBackgroundColor: AppColors.white,
       ),
       child: Scaffold(
         body: FadeTransition(
@@ -116,12 +121,7 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper>
             controller: _pageController,
             onPageChanged: _onPageChanged,
             physics: const BouncingScrollPhysics(),
-            children: pages.map((page) =>
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  child: page,
-                )
-            ).toList(),
+            children: pages,
           ),
         ),
         bottomNavigationBar: _buildCustomBottomNav(),
@@ -132,7 +132,7 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper>
   Widget _buildCustomBottomNav() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white, // Set navigation bar background to white
+        color: Colors.white,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
@@ -148,10 +148,10 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper>
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildNavItem(0, Icons.home_outlined, Icons.home, 'Home'),
-              _buildNavItem(1, Icons.calendar_today_outlined, Icons.calendar_today, 'Today'),
+              _buildNavItem(1, Icons.access_time_rounded, Icons.access_time_rounded, 'Today'),
               _buildNavItem(2, Icons.mic, Icons.mic, 'Speak', isAlwaysActive: true),
               _buildNavItem(3, Icons.event_note_outlined, Icons.event_note, 'Calendar'),
-              _buildNavItem(4, Icons.edit_outlined, Icons.edit, 'Notes'),
+              _buildNavItem(4, Icons.edit, Icons.edit, 'Notes'),
             ],
           ),
         ),
@@ -159,60 +159,61 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper>
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, IconData activeIcon, String label,
-      {bool isAlwaysActive = false}) {
-    final isSelected = _currentIndex == index || (isAlwaysActive && index == 2);
+  Widget _buildNavItem(
+      int index,
+      IconData icon,
+      IconData activeIcon,
+      String label, {
+        bool isAlwaysActive = false,
+      }) {
+    final bool isSelected = _currentIndex == index || (isAlwaysActive && index == 2);
+
+    if (index == 2) {
+      return GestureDetector(
+        onTap: () => _onTabTapped(index),
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.green,
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.green.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Icon(
+            Icons.mic,
+            color: Colors.white,
+            size: 30,
+          ),
+        ),
+      );
+    }
 
     return GestureDetector(
       onTap: () => _onTabTapped(index),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
-        padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 8.0),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? (index == 2 ? AppColors.green.withOpacity(0.1) : AppColors.blueColor.withOpacity(0.1))
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12.0),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
-              transitionBuilder: (Widget child, Animation<double> animation) {
-                return ScaleTransition(
-                  scale: animation,
-                  child: FadeTransition(
-                    opacity: animation,
-                    child: child,
-                  ),
-                );
-              },
-              child: Icon(
-                isSelected ? activeIcon : icon,
-                key: ValueKey(isSelected),
-                color: isSelected
-                    ? (index == 2 ? AppColors.green : AppColors.blueColor)
-                    : Colors.grey,
-                size: 24,
-              ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isSelected ? activeIcon : icon,
+            color: isSelected ? AppColors.green : Colors.grey,
+            size: 24,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? AppColors.green : Colors.grey,
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+              fontFamily: 'Poppins',
             ),
-            const SizedBox(height: 4),
-            AnimatedDefaultTextStyle(
-              duration: const Duration(milliseconds: 200),
-              style: TextStyle(
-                color: isSelected
-                    ? (index == 2 ? AppColors.green : AppColors.blueColor)
-                    : Colors.grey,
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                fontFamily: 'Poppins',
-              ),
-              child: Text(label),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -230,7 +231,7 @@ class _ComingSoonPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Set background to white
+      backgroundColor: Colors.white,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

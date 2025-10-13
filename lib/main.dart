@@ -3,14 +3,21 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:saytask/repository/calendar_service.dart';
 import 'package:saytask/repository/today_task_service.dart';
+import 'package:saytask/repository/voice_record_provider_note.dart';
 import 'package:saytask/utils/routes/routes.dart';
+import 'repository/notes_service.dart';
 
 void main() {
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => TaskProvider()),
+        ChangeNotifierProvider(create: (_) => CalendarProvider()),
+        ChangeNotifierProvider(create: (_) => NotesProvider()),
+        ChangeNotifierProvider(create: (_) => NoteDetailsViewModel()),
+        ChangeNotifierProvider(create: (_) => VoiceRecordProvider()),
       ],
       child: const MyApp(),
     ),
@@ -43,6 +50,16 @@ class MyApp extends StatelessWidget {
             ),
           ),
           routerConfig: router,
+          builder: (context, widget) {
+            // Debug provider availability
+            try {
+              context.read<NotesProvider>();
+              print('NotesProvider found in MyApp');
+            } catch (e) {
+              print('NotesProvider NOT found in MyApp: $e');
+            }
+            return widget!;
+          },
         );
       },
     );

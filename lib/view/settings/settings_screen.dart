@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:saytask/repository/plan_service.dart';
 import 'package:saytask/view/settings/profile_card.dart';
 import '../../../res/color.dart';
 import '../../res/components/settings_tile.dart';
@@ -106,7 +109,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               SizedBox(height: 8.h),
               // Buy Subscription Dropdown
-              _buildSubscriptionDropdown(),
+              _buildSubscriptionDropdown(context),
 
               SettingToggleTile(
                 title: 'Enable WhatsApp Bot',
@@ -141,7 +144,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildSubscriptionDropdown() {
+  Widget _buildSubscriptionDropdown(BuildContext context) {
+    final viewModel = context.watch<PlanViewModel>();
+    bool isExpanded = isSubscriptionExpanded; // keep your local expand variable
+
     return Container(
       margin: EdgeInsets.symmetric(vertical: 4.h),
       decoration: BoxDecoration(
@@ -176,7 +182,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                   AnimatedRotation(
-                    turns: isSubscriptionExpanded ? 0.5 : 0,
+                    turns: isExpanded ? 0.5 : 0,
                     duration: const Duration(milliseconds: 300),
                     child: Icon(
                       Icons.keyboard_arrow_down,
@@ -203,40 +209,83 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   padding: EdgeInsets.all(16.w),
                   child: Column(
                     children: [
-                      // Free Plan
-                      _buildPlanCard(
-                        planIndex: 0,
-                        title: 'Free Plan',
-                        tasks: '14 tasks/week',
-                        yearlyPrice: '\$XX.XX/year',
-                        monthlyPrice: '\$XX.XX/year',
-                        isSelected: selectedPlan == 0,
-                        showCheckmark: selectedPlan == 0,
+                      // Monthly / Yearly toggle (custom container style)
+                      Container(
+                        padding: EdgeInsets.all(4.w),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F3F5),
+                          borderRadius: BorderRadius.circular(25.r),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () => viewModel.togglePlanType(true),
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(vertical: 10.h),
+                                  decoration: BoxDecoration(
+                                    color: viewModel.isMonthly
+                                        ? AppColors.white
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(20.r),
+                                  ),
+                                  child: Text(
+                                    "Monthly",
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.inter(
+                                      color: viewModel.isMonthly
+                                          ? AppColors.black
+                                          : AppColors.black,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14.sp,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () => viewModel.togglePlanType(false),
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(vertical: 10.h),
+                                  decoration: BoxDecoration(
+                                    color: !viewModel.isMonthly
+                                        ? AppColors.white
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(20.r),
+                                  ),
+                                  child: Text(
+                                    "Annual Save 20%",
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.inter(
+                                      color: !viewModel.isMonthly
+                                          ? AppColors.black
+                                          : AppColors.black,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14.sp,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
 
-                      SizedBox(height: 12.h),
+                      SizedBox(height: 20.h),
 
-                      // Premium Plan
-                      _buildPlanCard(
-                        planIndex: 1,
-                        title: 'Premium Plan',
-                        tasks: '56 tasks/week',
-                        yearlyPrice: '\$XX.XX/year',
-                        monthlyPrice: '\$XX.XX/year',
-                        isSelected: selectedPlan == 1,
-                      ),
-
-                      SizedBox(height: 12.h),
-
-                      // Unlimited Plan
-                      _buildPlanCard(
-                        planIndex: 2,
-                        title: 'Unlimited',
-                        tasks: 'Unlimited+ tasks/week',
-                        yearlyPrice: '\$XX.XX/year',
-                        monthlyPrice: '\$XX.XX/year',
-                        isSelected: selectedPlan == 2,
-                      ),
+                      // Dynamic plans (from ViewModel)
+                      for (int i = 0; i < viewModel.plans.length; i++) ...[
+                        _buildPlanCard(
+                          context: context,
+                          planIndex: i,
+                          title: viewModel.plans[i].name,
+                          tasks: viewModel.plans[i].description,
+                          yearlyPrice: viewModel.plans[i].price,
+                          isSelected: viewModel.selectedIndex == i,
+                        ),
+                        SizedBox(height: 12.h),
+                      ],
 
                       SizedBox(height: 16.h),
 
@@ -246,11 +295,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         height: 52.h,
                         child: ElevatedButton(
                           onPressed: () {
-                            // Handle buy action
+                            final selectedPlan =
+                            viewModel.plans[viewModel.selectedIndex];
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(
-                                    'Buying ${_getPlanName(selectedPlan)}'),
+                                content: Text('Buying ${selectedPlan.name}'),
                                 backgroundColor: const Color(0xFF34C759),
                               ),
                             );
@@ -277,7 +326,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ],
             ),
-            crossFadeState: isSubscriptionExpanded
+            crossFadeState: isExpanded
                 ? CrossFadeState.showSecond
                 : CrossFadeState.showFirst,
             duration: const Duration(milliseconds: 300),
@@ -287,33 +336,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  String _getPlanName(int index) {
-    switch (index) {
-      case 0:
-        return 'Free Plan';
-      case 1:
-        return 'Premium Plan';
-      case 2:
-        return 'Unlimited Plan';
-      default:
-        return 'Plan';
-    }
-  }
-
   Widget _buildPlanCard({
+    required BuildContext context,
     required int planIndex,
     required String title,
     required String tasks,
     required String yearlyPrice,
-    required String monthlyPrice,
     required bool isSelected,
     bool showCheckmark = false,
   }) {
     return GestureDetector(
       onTap: () {
-        setState(() {
-          selectedPlan = planIndex;
-        });
+        final viewModel = context.read<PlanViewModel>();
+        viewModel.selectPlan(planIndex);
       },
       child: Container(
         padding: EdgeInsets.all(16.w),
@@ -328,43 +363,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Radio button or checkmark
+            // Radio button / checkmark
             Container(
               width: 20.w,
               height: 20.w,
               margin: EdgeInsets.only(top: 2.h),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: showCheckmark
-                    ? const Color(0xFF34C759)
-                    : Colors.transparent,
+                color: isSelected ? const Color(0xFF34C759) : Colors.transparent,
                 border: Border.all(
-                  color: showCheckmark
+                  color: isSelected
                       ? const Color(0xFF34C759)
                       : const Color(0xFFCCCCCC),
-                  width: showCheckmark ? 0 : 2,
+                  width: isSelected ? 0 : 2,
                 ),
               ),
-              child: showCheckmark
-                  ? Icon(
-                Icons.check,
-                size: 14.sp,
-                color: Colors.white,
-              )
-                  : isSelected
-                  ? Center(
-                child: Container(
-                  width: 10.w,
-                  height: 10.w,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Color(0xFF34C759),
-                  ),
-                ),
-              )
+              child: isSelected
+                  ? Icon(Icons.check, size: 14.sp, color: Colors.white)
                   : null,
             ),
-
             SizedBox(width: 12.w),
 
             // Plan details
@@ -390,27 +407,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                   SizedBox(height: 4.h),
-                  Row(
-                    children: [
-                      Text(
-                        yearlyPrice,
-                        style: TextStyle(
-                          color: const Color(0xFF666666),
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                      SizedBox(width: 8.w),
-                      Text(
-                        monthlyPrice,
-                        style: TextStyle(
-                          color: const Color(0xFF999999),
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w400,
-                          decoration: TextDecoration.lineThrough,
-                        ),
-                      ),
-                    ],
+                  Text(
+                    yearlyPrice,
+                    style: TextStyle(
+                      color: const Color(0xFF666666),
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w400,
+                    ),
                   ),
                 ],
               ),

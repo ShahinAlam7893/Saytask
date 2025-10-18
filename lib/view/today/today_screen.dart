@@ -4,11 +4,9 @@ import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-
 import '../../model/today_task_model.dart';
 import '../../repository/today_task_service.dart';
 import '../../res/components/schedule_card.dart';
-
 
 class TodayScreen extends StatefulWidget {
   const TodayScreen({super.key});
@@ -18,7 +16,9 @@ class TodayScreen extends StatefulWidget {
 }
 
 class _TodayScreenState extends State<TodayScreen> {
-  final ScrollController _scrollController = ScrollController();
+  final ScrollController _mainScrollController = ScrollController();
+  final ScrollController _scheduleScrollController = ScrollController();
+  final ScrollController _timelineScrollController = ScrollController();
   final double _hourHeight = 200.h;
   final int _startHour = 1;
   final int _endHour = 24;
@@ -36,14 +36,26 @@ class _TodayScreenState extends State<TodayScreen> {
   void initState() {
     super.initState();
 
-    // Initialize tasks via Provider
-    final taskProvider = Provider.of<TaskProvider>(context, listen: false);
-    taskProvider.setTasks(_initializeTasks());
+    // Synchronize timeline and schedule scrolling
+    _scheduleScrollController.addListener(() {
+      _timelineScrollController.jumpTo(_scheduleScrollController.offset);
+    });
+    _timelineScrollController.addListener(() {
+      _scheduleScrollController.jumpTo(_timelineScrollController.offset);
+    });
+
+    // Defer setting tasks until after the first build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+      taskProvider.setTasks(_initializeTasks());
+    });
   }
 
   @override
   void dispose() {
-    _scrollController.dispose();
+    _mainScrollController.dispose();
+    _scheduleScrollController.dispose();
+    _timelineScrollController.dispose();
     super.dispose();
   }
 
@@ -53,6 +65,7 @@ class _TodayScreenState extends State<TodayScreen> {
       Task(
         id: '1',
         title: 'Buy groceries',
+        description: '',
         startTime: today.add(const Duration(hours: 7)),
         duration: const Duration(hours: 1, minutes: 30),
         tags: [
@@ -65,10 +78,12 @@ class _TodayScreenState extends State<TodayScreen> {
               backgroundColor: const Color(0xFFE3F2FD),
               textColor: const Color(0xFF42A5F5)),
         ],
+        reminders: [], // Explicitly set mutable list
       ),
       Task(
         id: '2',
         title: 'Office Meeting',
+        description: '',
         startTime: today.add(const Duration(hours: 9)),
         duration: const Duration(hours: 1),
         tags: [
@@ -81,10 +96,12 @@ class _TodayScreenState extends State<TodayScreen> {
               backgroundColor: const Color(0xFFE3F2FD),
               textColor: const Color(0xFF42A5F5)),
         ],
+        reminders: [], // Explicitly set mutable list
       ),
       Task(
         id: '3',
         title: 'Client Meeting',
+        description: '',
         startTime: today.add(const Duration(hours: 11)),
         duration: const Duration(minutes: 45),
         tags: [
@@ -97,6 +114,7 @@ class _TodayScreenState extends State<TodayScreen> {
               backgroundColor: const Color(0xFFE3F2FD),
               textColor: const Color(0xFF42A5F5)),
         ],
+        reminders: [], // Explicitly set mutable list
       ),
     ];
   }
@@ -105,19 +123,23 @@ class _TodayScreenState extends State<TodayScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildTimeline(),
-                  Expanded(child: _buildScheduleArea()),
-                ],
+        child: SingleChildScrollView(
+          controller: _mainScrollController,
+          child: Column(
+            children: [
+              _buildHeader(),
+              SizedBox(
+                height: (_endHour - _startHour + 1) * _hourHeight + 20.h,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildTimeline(),
+                    Expanded(child: _buildScheduleArea()),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -131,23 +153,11 @@ class _TodayScreenState extends State<TodayScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Logo
               SvgPicture.asset(
                 'assets/images/Saytask_logo.svg',
                 height: 24.h,
                 width: 100.w,
               ),
-              // Settings Icon
-              // IconButton(
-              //   icon: Icon(
-              //     Icons.settings_outlined,
-              //     color: Colors.black,
-              //     size: 24.sp,
-              //   ),
-              //   onPressed: () {
-              //     context.push('/settings');
-              //   },
-              // ),
             ],
           ),
           SizedBox(height: 16.h),
@@ -186,21 +196,25 @@ class _TodayScreenState extends State<TodayScreen> {
     return Container(
       width: 60.w,
       padding: EdgeInsets.only(top: 12.h),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: List.generate(_endHour - _startHour + 1, (index) {
-          final hour = _startHour + index;
-          return SizedBox(
-            height: _hourHeight,
-            child: Text(
-              DateFormat('h a').format(DateTime(2025, 1, 1, hour)),
-              style: TextStyle(
-                  fontSize: 12.sp,
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500),
-            ),
-          );
-        }),
+      child: SingleChildScrollView(
+        controller: _timelineScrollController,
+        physics: const NeverScrollableScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: List.generate(_endHour - _startHour + 1, (index) {
+            final hour = _startHour + index;
+            return SizedBox(
+              height: _hourHeight,
+              child: Text(
+                DateFormat('h a').format(DateTime(2025, 1, 1, hour)),
+                style: TextStyle(
+                    fontSize: 12.sp,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500),
+              ),
+            );
+          }),
+        ),
       ),
     );
   }
@@ -218,7 +232,7 @@ class _TodayScreenState extends State<TodayScreen> {
               final renderBox = context.findRenderObject() as RenderBox;
               final localOffset = renderBox.globalToLocal(details.offset);
 
-              final dy = localOffset.dy + _scrollController.offset;
+              final dy = localOffset.dy + _scheduleScrollController.offset;
 
               final totalMinutes = (dy / _hourHeight) * 60;
               final snappedMinutes = (totalMinutes / 15).round() * 15;
@@ -241,7 +255,7 @@ class _TodayScreenState extends State<TodayScreen> {
             },
             builder: (context, candidateData, rejectedData) {
               return SingleChildScrollView(
-                controller: _scrollController,
+                controller: _scheduleScrollController,
                 child: Container(
                   height: (_endHour - _startHour + 1) * _hourHeight,
                   child: Stack(
@@ -281,8 +295,12 @@ class _TodayScreenState extends State<TodayScreen> {
                             onDragEnd: (_) {
                               _draggedTask = null;
                             },
-                            child:
-                            ScheduleCard(task: task, hourHeight: _hourHeight),
+                            child: GestureDetector(
+                              onTap: () {
+                                context.push('/task-details', extra: task);
+                              },
+                              child: ScheduleCard(task: task, hourHeight: _hourHeight),
+                            ),
                           ),
                         );
                       }).toList(),
@@ -321,8 +339,8 @@ class _TodayScreenState extends State<TodayScreen> {
       if (!mounted || _pointerOffset == null) return;
 
       final pointerY = _pointerOffset!.dy;
-      final maxScroll = _scrollController.position.maxScrollExtent;
-      final currentScroll = _scrollController.offset;
+      final maxScroll = _scheduleScrollController.position.maxScrollExtent;
+      final currentScroll = _scheduleScrollController.offset;
 
       double scrollDelta = 0;
 
@@ -333,14 +351,15 @@ class _TodayScreenState extends State<TodayScreen> {
       }
       // Scroll down if near bottom
       else if (pointerY > MediaQuery.of(context).size.height - _scrollThreshold) {
-        final distance = pointerY - (MediaQuery.of(context).size.height - _scrollThreshold);
+        final distance =
+            pointerY - (MediaQuery.of(context).size.height - _scrollThreshold);
         scrollDelta = _scrollSpeed * (1 + distance / _scrollThreshold);
       }
 
-      final newOffset = (currentScroll + scrollDelta)
-          .clamp(0.0, maxScroll);
+      final newOffset = (currentScroll + scrollDelta).clamp(0.0, maxScroll);
 
-      _scrollController.jumpTo(newOffset);
+      _scheduleScrollController.jumpTo(newOffset);
+      _timelineScrollController.jumpTo(newOffset);
     }
   }
 
@@ -348,4 +367,3 @@ class _TodayScreenState extends State<TodayScreen> {
     _autoScrolling = false;
   }
 }
-

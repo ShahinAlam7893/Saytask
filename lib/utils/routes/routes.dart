@@ -1,8 +1,12 @@
 import 'package:go_router/go_router.dart';
 import 'package:saytask/model/note_model.dart';
+import 'package:saytask/model/today_task_model.dart';
+import 'package:saytask/view/chat/chat_screen.dart';
 import 'package:saytask/view/note/create_note_screen.dart';
 import 'package:saytask/view/note/note_details_screen.dart';
+import 'package:saytask/view/onboarding/plan_screen.dart';
 import 'package:saytask/view/onboarding/splash_screen.dart';
+import 'package:saytask/view/today/task_details_screen.dart';
 import '../../model/event_model.dart';
 import '../../res/components/nab_bar.dart';
 import '../../view/auth_view/create_new_password_screen.dart';
@@ -44,6 +48,10 @@ final GoRouter router = GoRouter(
       builder: (context, state) => const OnboardingThree(),
     ),
     GoRoute(
+      path: '/plan_screen',
+      builder: (context, state) => const PlanScreen(),
+    ),
+    GoRoute(
       path: '/login',
       builder: (context, state) => const LoginScreen(),
     ),
@@ -70,6 +78,10 @@ final GoRouter router = GoRouter(
     GoRoute(
       path: '/home',
       builder: (context, state) => const SmoothNavigationWrapper(initialIndex: 0),
+    ),
+    GoRoute(
+      path: '/chat',
+      builder: (context, state) => ChatPage(),
     ),
     GoRoute(
       path: '/settings',
@@ -106,6 +118,14 @@ final GoRouter router = GoRouter(
     GoRoute(
       path: '/create_note',
       builder: (context, state) => const CreateNoteScreen(),
+    ),
+    GoRoute(
+      path: '/task-details',
+      name: 'taskDetails',
+      builder: (context, state) {
+        final task = state.extra as Task?;
+        return TaskDetailsScreen(task: task!);
+      },
     ),
     GoRoute(
       path: '/event_details',

@@ -4,10 +4,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:saytask/repository/calendar_service.dart';
+import 'package:saytask/repository/chat_service.dart';
 import 'package:saytask/repository/today_task_service.dart';
 import 'package:saytask/repository/voice_record_provider_note.dart';
 import 'package:saytask/utils/routes/routes.dart';
 import 'repository/notes_service.dart';
+import 'repository/plan_service.dart';
 
 void main() {
   runApp(
@@ -18,6 +20,8 @@ void main() {
         ChangeNotifierProvider(create: (_) => NotesProvider()),
         ChangeNotifierProvider(create: (_) => NoteDetailsViewModel()),
         ChangeNotifierProvider(create: (_) => VoiceRecordProvider()),
+        ChangeNotifierProvider(create: (_) => PlanViewModel()),
+        ChangeNotifierProvider(create: (_) => ChatViewModel()),
       ],
       child: const MyApp(),
     ),

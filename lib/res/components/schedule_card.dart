@@ -1,7 +1,5 @@
-// The file is: lib/res/components/schedule_card.dart
-
+// lib/res/components/schedule_card.dart
 import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
@@ -19,10 +17,8 @@ class ScheduleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // --- FIX 1: Enforce a minimum height for the card ---
-    // This prevents the card from becoming too small for its content on short tasks.
     final double calculatedHeight = (task.duration.inMinutes / 60.0) * hourHeight - 4.h;
-    final double minCardHeight = 100.h; // A safe minimum height to prevent overflow.
+    final double minCardHeight = 100.h;
     final cardHeight = max(calculatedHeight, minCardHeight);
 
     return Container(
@@ -37,7 +33,6 @@ class ScheduleCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top Row: Time and Circle
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -59,14 +54,10 @@ class ScheduleCard extends StatelessWidget {
               ),
             ],
           ),
-
-          // --- FIX 2: Replace Spacer with Expanded for a flexible layout ---
-          // Expanded takes up the remaining space, pushing the duration to the
-          // bottom without causing a fight for pixels.
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center, // Vertically center the content
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
                   task.title,
@@ -84,11 +75,15 @@ class ScheduleCard extends StatelessWidget {
                   runSpacing: 4.h,
                   children: task.tags.map((tag) => _TagChip(tag: tag)).toList(),
                 ),
+                SizedBox(height: 4.h),
+                Wrap(
+                  spacing: 8.w,
+                  runSpacing: 4.h,
+                  children: (task.reminders ?? []).map((reminder) => _ReminderChip(reminder: reminder)).toList(),
+                ),
               ],
             ),
           ),
-
-          // Bottom Row: Duration Icon and Text
           Row(
             children: [
               Icon(
@@ -113,7 +108,6 @@ class ScheduleCard extends StatelessWidget {
   }
 
   String _formatDuration(Duration duration) {
-    // ... (This function remains the same)
     final hours = duration.inHours;
     final minutes = duration.inMinutes.remainder(60);
     if (hours > 0) {
@@ -142,6 +136,30 @@ class _TagChip extends StatelessWidget {
           color: tag.textColor,
           fontSize: 11.sp,
           fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+}
+
+class _ReminderChip extends StatelessWidget {
+  final String reminder;
+  const _ReminderChip({required this.reminder});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(6.r),
+      ),
+      child: Text(
+        reminder,
+        style: TextStyle(
+          color: Colors.black87,
+          fontSize: 11.sp,
+          fontWeight: FontWeight.w500,
         ),
       ),
     );

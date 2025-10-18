@@ -22,7 +22,7 @@ class OnboardingThree extends StatelessWidget {
                 alignment: Alignment.topRight,
                 child: InkWell(
                   onTap: () {
-                    context.go('/login');
+                    context.push('/plan_screen');
                   },
                   child: Padding(
                     padding: EdgeInsets.only(top: 20.h),

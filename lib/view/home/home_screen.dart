@@ -181,7 +181,7 @@ class _HomeScreenState extends State<HomeScreen> {
         width: 60.w,
         height: 60.h,
         child: FloatingActionButton(
-          onPressed: () {},
+          onPressed: () {context.push('/chat');},
           backgroundColor: AppColors.green,
           shape: const CircleBorder(),
           elevation: 4,

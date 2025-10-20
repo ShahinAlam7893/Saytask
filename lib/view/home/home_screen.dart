@@ -1,9 +1,9 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:saytask/res/color.dart';
-
 import '../../res/components/recording_completing_dialog.dart';
 import '../speak_screen/speak_screen.dart';
 
@@ -17,11 +17,36 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
   bool isRecording = false;
+  String? _selectedFileName;
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickFile() async {
+    final result = await FilePicker.platform.pickFiles();
+
+    if (result != null && result.files.isNotEmpty) {
+      setState(() {
+        _selectedFileName = result.files.single.name;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('File selected: ${result.files.single.name}'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No file selected'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -36,13 +61,11 @@ class _HomeScreenState extends State<HomeScreen> {
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // Logo
             SvgPicture.asset(
               'assets/images/Saytask_logo.svg',
               height: 24.h,
               width: 100.w,
             ),
-            // Settings Icon
             IconButton(
               icon: Icon(
                 Icons.settings_outlined,
@@ -58,7 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: Column(
         children: [
-          // Search Bar
+          // 🔹 Search Bar (with working attach icon)
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
             child: TextField(
@@ -72,10 +95,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 filled: true,
                 fillColor: Colors.grey[50],
-                suffixIcon: Icon(
-                  Icons.attach_file,
-                  color: Colors.grey[600],
-                  size: 20.sp,
+                suffixIcon: IconButton(
+                  onPressed: _pickFile, // ✅ open file picker
+                  icon: Icon(
+                    Icons.attach_file,
+                    color: Colors.grey[600],
+                    size: 20.sp,
+                  ),
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(25.r),
@@ -97,7 +123,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          // Main Content Area
+          // 🔹 Main Content
           Expanded(
             child: Center(
               child: Column(
@@ -152,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     // Meeting Info Text
                     Text(
-                      'Meeting today at 3:11 PM with Zen....', // Updated to current time
+                      'Meeting today at 3:11 PM with Zen....',
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 14.sp,
@@ -161,7 +187,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ] else ...[
-                    // SpeakScreen Content
                     SpeakScreen(
                       onStop: () {
                         setState(() => isRecording = false);
@@ -176,12 +201,14 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
 
-      // Floating Action Button
+      // 🔹 Floating Chat Button
       floatingActionButton: SizedBox(
         width: 60.w,
         height: 60.h,
         child: FloatingActionButton(
-          onPressed: () {context.push('/chat');},
+          onPressed: () {
+            context.push('/chat');
+          },
           backgroundColor: AppColors.green,
           shape: const CircleBorder(),
           elevation: 4,

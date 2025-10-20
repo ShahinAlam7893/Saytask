@@ -92,8 +92,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               SizedBox(height: 8.h),
               ProfileCard(
-                name: 'John Doe',
-                email: 'john.doe@example.com',
+                name: 'Gabriel',
+                email: 'gabriel4@gmail.com',
                 onTap: () {context.push('/profile_screen');},
               ),
               SettingTile(
@@ -135,7 +135,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                onTap: () {},
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      backgroundColor: AppColors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15.r),
+                      ),
+                      title: Text(
+                        'Logout Confirmation',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18.sp,
+                        ),
+                      ),
+                      content: Text(
+                        'Are you sure you want to logout?',
+                        style: TextStyle(fontSize: 14.sp),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context), // Cancel
+                          child: Text(
+                            'Cancel',
+                            style: TextStyle(color: Colors.grey[700]),
+                          ),
+                        ),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.red,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8.r),
+                            ),
+                          ),
+                          onPressed: () {
+                            context.pop(context); // Close dialog
+                            // Add your logout logic here
+                            // Example: Provider.of<AuthProvider>(context, listen: false).logout();
+                          },
+                          child: Text(
+                            'Logout',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ],
           ),

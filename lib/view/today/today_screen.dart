@@ -4,6 +4,7 @@ import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:saytask/res/color.dart';
 import '../../model/today_task_model.dart';
 import '../../repository/today_task_service.dart';
 import '../../res/components/schedule_card.dart';
@@ -44,7 +45,6 @@ class _TodayScreenState extends State<TodayScreen> {
       _scheduleScrollController.jumpTo(_timelineScrollController.offset);
     });
 
-    // Defer setting tasks until after the first build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final taskProvider = Provider.of<TaskProvider>(context, listen: false);
       taskProvider.setTasks(_initializeTasks());
@@ -83,7 +83,7 @@ class _TodayScreenState extends State<TodayScreen> {
       Task(
         id: '2',
         title: 'Office Meeting',
-        description: '',
+        description: 'This is our monthly report meeting',
         startTime: today.add(const Duration(hours: 9)),
         duration: const Duration(hours: 1),
         tags: [
@@ -134,6 +134,7 @@ class _TodayScreenState extends State<TodayScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildTimeline(),
+                    _buildScrollableDivider(),
                     Expanded(child: _buildScheduleArea()),
                   ],
                 ),
@@ -195,7 +196,7 @@ class _TodayScreenState extends State<TodayScreen> {
   Widget _buildTimeline() {
     return Container(
       width: 60.w,
-      padding: EdgeInsets.only(top: 12.h),
+      padding: EdgeInsets.only(top: 97.h),
       child: SingleChildScrollView(
         controller: _timelineScrollController,
         physics: const NeverScrollableScrollPhysics(),
@@ -209,8 +210,8 @@ class _TodayScreenState extends State<TodayScreen> {
                 DateFormat('h a').format(DateTime(2025, 1, 1, hour)),
                 style: TextStyle(
                     fontSize: 12.sp,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500),
+                    color: AppColors.black,
+                    fontWeight: FontWeight.w700),
               ),
             );
           }),
@@ -218,6 +219,30 @@ class _TodayScreenState extends State<TodayScreen> {
       ),
     );
   }
+
+
+  Widget _buildScrollableDivider() {
+    return Container(
+      width: 1.w,
+      color: Colors.grey[300],
+      margin: EdgeInsets.only(top: 1.h),
+      child: SingleChildScrollView(
+        controller: _timelineScrollController,
+        physics: const NeverScrollableScrollPhysics(),
+        child: Column(
+          children: List.generate(
+            _endHour - _startHour + 1,
+                (index) => Container(
+              height: _hourHeight,
+              color: Colors.grey[300],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+
 
   Widget _buildScheduleArea() {
     return Consumer<TaskProvider>(
@@ -273,36 +298,91 @@ class _TodayScreenState extends State<TodayScreen> {
                           top: topPosition,
                           left: 0,
                           right: 16.w,
-                          child: LongPressDraggable<Task>(
-                            data: task,
-                            feedback: Material(
-                              color: Colors.transparent,
-                              child: Opacity(
-                                opacity: 0.9,
-                                child: ScheduleCard(
-                                    task: task, hourHeight: _hourHeight),
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              // ✅ Green bubble aligned with divider
+                              Positioned(
+                                left: -6.w, // slightly outside the card, aligns with divider line
+                                top: 100.h, // adjust for vertical centering
+                                child: Container(
+                                  width: 10.w,
+                                  height: 10.w,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF4CAF50), // green bubble
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
                               ),
-                            ),
-                            childWhenDragging: Opacity(
-                              opacity: 0.3,
-                              child: ScheduleCard(
-                                  task: task, hourHeight: _hourHeight),
-                            ),
-                            onDragStarted: () {
-                              _draggedTask = task;
-                              _startAutoScroll();
-                            },
-                            onDragEnd: (_) {
-                              _draggedTask = null;
-                            },
-                            child: GestureDetector(
-                              onTap: () {
-                                context.push('/task-details', extra: task);
-                              },
-                              child: ScheduleCard(task: task, hourHeight: _hourHeight),
-                            ),
+
+                              // ✅ Draggable schedule card
+                              LongPressDraggable<Task>(
+                                data: task,
+                                feedback: Material(
+                                  color: Colors.transparent,
+                                  child: Opacity(
+                                    opacity: 0.9,
+                                    child: ScheduleCard(task: task, hourHeight: _hourHeight),
+                                  ),
+                                ),
+                                childWhenDragging: Opacity(
+                                  opacity: 0.3,
+                                  child: ScheduleCard(task: task, hourHeight: _hourHeight),
+                                ),
+                                onDragStarted: () {
+                                  _draggedTask = task;
+                                  _startAutoScroll();
+                                },
+                                onDragEnd: (_) {
+                                  _draggedTask = null;
+                                },
+                                child: GestureDetector(
+                                  onTap: () {
+                                    context.push('/task-details', extra: task);
+                                  },
+                                  child: Padding(
+                                    padding: EdgeInsets.only(left: 5.w), // ✅ move right here
+                                    child: ScheduleCard(task: task, hourHeight: _hourHeight),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         );
+                        // return Positioned(
+                        //   top: topPosition,
+                        //   left: 0,
+                        //   right: 16.w,
+                        //   child: LongPressDraggable<Task>(
+                        //     data: task,
+                        //     feedback: Material(
+                        //       color: Colors.transparent,
+                        //       child: Opacity(
+                        //         opacity: 0.9,
+                        //         child: ScheduleCard(
+                        //             task: task, hourHeight: _hourHeight),
+                        //       ),
+                        //     ),
+                        //     childWhenDragging: Opacity(
+                        //       opacity: 0.3,
+                        //       child: ScheduleCard(
+                        //           task: task, hourHeight: _hourHeight),
+                        //     ),
+                        //     onDragStarted: () {
+                        //       _draggedTask = task;
+                        //       _startAutoScroll();
+                        //     },
+                        //     onDragEnd: (_) {
+                        //       _draggedTask = null;
+                        //     },
+                        //     child: GestureDetector(
+                        //       onTap: () {
+                        //         context.push('/task-details', extra: task);
+                        //       },
+                        //       child: ScheduleCard(task: task, hourHeight: _hourHeight),
+                        //     ),
+                        //   ),
+                        // );
                       }).toList(),
                     ],
                   ),
@@ -347,7 +427,7 @@ class _TodayScreenState extends State<TodayScreen> {
       // Scroll up if near top
       if (pointerY < _scrollThreshold) {
         scrollDelta = -_scrollSpeed *
-            (1 - pointerY / _scrollThreshold); // faster when closer to top
+            (1 - pointerY / _scrollThreshold);
       }
       // Scroll down if near bottom
       else if (pointerY > MediaQuery.of(context).size.height - _scrollThreshold) {

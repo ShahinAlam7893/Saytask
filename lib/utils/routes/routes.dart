@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 import 'package:saytask/model/note_model.dart';
 import 'package:saytask/model/today_task_model.dart';
 import 'package:saytask/view/chat/chat_screen.dart';
+import 'package:saytask/view/event/edit_event_screen.dart';
 import 'package:saytask/view/note/create_note_screen.dart';
 import 'package:saytask/view/note/note_details_screen.dart';
 import 'package:saytask/view/onboarding/plan_screen.dart';
@@ -29,7 +30,7 @@ import '../../view/settings/terms_and_condition.dart';
 import '../../view/settings/update_password.dart';
 
 final GoRouter router = GoRouter(
-  initialLocation: '/home',
+  initialLocation: '/splash',
   routes: [
     GoRoute(
       path: '/splash',
@@ -134,6 +135,16 @@ final GoRouter router = GoRouter(
         return EventDetailsScreen(event: event);
       },
     ),
+
+    GoRoute(
+      path: '/edit_event',
+      name: 'editEvent',
+      builder: (context, state) {
+        final event = state.extra as Event;
+        return EventEditScreen(event: event);
+      },
+    ),
+
     GoRoute(
       path: '/note_details',
       builder: (context, state) {

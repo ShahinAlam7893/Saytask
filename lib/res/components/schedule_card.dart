@@ -17,9 +17,8 @@ class ScheduleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double calculatedHeight = (task.duration.inMinutes / 60.0) * hourHeight - 4.h;
-    final double minCardHeight = 100.h;
-    final cardHeight = max(calculatedHeight, minCardHeight);
+    // Every card height = one hour slot
+    final double cardHeight = hourHeight;
 
     return Container(
       height: cardHeight,
@@ -75,12 +74,6 @@ class ScheduleCard extends StatelessWidget {
                   runSpacing: 4.h,
                   children: task.tags.map((tag) => _TagChip(tag: tag)).toList(),
                 ),
-                SizedBox(height: 4.h),
-                Wrap(
-                  spacing: 8.w,
-                  runSpacing: 4.h,
-                  children: (task.reminders ?? []).map((reminder) => _ReminderChip(reminder: reminder)).toList(),
-                ),
               ],
             ),
           ),
@@ -117,6 +110,7 @@ class ScheduleCard extends StatelessWidget {
     }
   }
 }
+
 
 class _TagChip extends StatelessWidget {
   final Tag tag;

@@ -328,7 +328,7 @@ class EventCard extends StatelessWidget {
     return InkWell(
       onTap: () {
         context.push('/event_details', extra: event);
-        SnackBar(content: Text('${event.title} clicked!'));
+        // Remove the SnackBar or make it functional if needed
       },
       child: Container(
         margin: EdgeInsets.only(bottom: 12.h),
@@ -370,7 +370,7 @@ class EventCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                SizedBox(height: 5.h,),
+                SizedBox(height: 5.h),
                 Row(
                   children: [
                     Icon(Icons.access_time, size: 14.sp, color: AppColors.deepBlack),

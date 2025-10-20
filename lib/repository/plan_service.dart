@@ -9,24 +9,42 @@ class PlanViewModel extends ChangeNotifier {
 
   final List<PlanModel> monthlyPlans = [
     PlanModel(
-      name: "Free Plan",
+      name: "Free",
       description: "14 tasks/week",
       price: "\$0.00/Monthly",
       period: "Monthly",
     ),
     PlanModel(
-      name: "Premium Plan",
+      name: "Premium",
       description: "56 tasks/week",
-      price: "\$9.99/Monthly",
+      price: "\$x.xx/Monthly",
+      period: "Monthly",
+    ),
+    PlanModel(
+      name: "Unlimited",
+      description: "Unlimited tasks/week",
+      price: "\$xx.xx/Monthly",
       period: "Monthly",
     ),
   ];
 
   final List<PlanModel> yearlyPlans = [
     PlanModel(
+      name: "Free",
+      description: "14 tasks/week",
+      price: "\$0.00",
+      period: "yearly",
+    ),
+    PlanModel(
+      name: "Premium",
+      description: "56 tasks/week",
+      price: "\$xx.xx",
+      period: "yearly",
+    ),
+    PlanModel(
       name: "Unlimited",
       description: "Unlimited tasks/week",
-      price: "\$99.99/Yearly",
+      price: "\$xx.xx",
       period: "Yearly",
     ),
   ];

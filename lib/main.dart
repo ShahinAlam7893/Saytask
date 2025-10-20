@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:saytask/repository/calendar_service.dart';
 import 'package:saytask/repository/chat_service.dart';
+import 'package:saytask/repository/settings_service.dart';
 import 'package:saytask/repository/today_task_service.dart';
 import 'package:saytask/repository/voice_record_provider_note.dart';
 import 'package:saytask/utils/routes/routes.dart';
@@ -22,6 +23,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => VoiceRecordProvider()),
         ChangeNotifierProvider(create: (_) => PlanViewModel()),
         ChangeNotifierProvider(create: (_) => ChatViewModel()),
+        ChangeNotifierProvider(create: (_) => SettingsViewModel()),
       ],
       child: const MyApp(),
     ),

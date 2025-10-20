@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:saytask/repository/plan_service.dart';
+import 'package:saytask/repository/settings_service.dart';
 import 'package:saytask/view/settings/profile_card.dart';
 import '../../../res/color.dart';
 import '../../res/components/settings_tile.dart';
@@ -20,11 +21,14 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool notifications = true;
   bool whatsappBot = true;
+  bool enableAIChatbot = true;
   bool isSubscriptionExpanded = false;
   int selectedPlan = 0; // 0 = Free, 1 = Premium, 2 = Unlimited
 
   @override
   Widget build(BuildContext context) {
+    final settingsViewModel = context.watch<SettingsViewModel>();
+
     return Scaffold(
       backgroundColor: AppColors.white,
       appBar: AppBar(
@@ -115,6 +119,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 title: 'Enable WhatsApp Bot',
                 value: whatsappBot,
                 onChanged: (v) => setState(() => whatsappBot = v),
+              ),
+              SizedBox(height: 8.h),
+              SettingToggleTile(
+                title: 'Enable AI Chatbot',
+                value: settingsViewModel.enableAIChatbot,
+                onChanged: (v) {
+                  settingsViewModel.setEnableAIChatbot(v);
+                },
               ),
               SizedBox(height: 20.h),
               ListTile(

@@ -160,7 +160,9 @@ class WeekdayHeaders extends StatelessWidget {
 }
 
 
-// 3. Calendar Grid
+
+// 3. Calendar Grid (Updated)
+// 3. Calendar Grid (Aligned + Current Month Only)
 class CalendarGrid extends StatelessWidget {
   const CalendarGrid({super.key});
 
@@ -170,28 +172,23 @@ class CalendarGrid extends StatelessWidget {
       builder: (context, provider, child) {
         final focusedDate = provider.focusedDate;
         final firstDayOfMonth = DateTime(focusedDate.year, focusedDate.month, 1);
-        final daysInMonth = DateTime(focusedDate.year, focusedDate.month + 1, 0).day;
+        final daysInMonth =
+            DateTime(focusedDate.year, focusedDate.month + 1, 0).day;
 
-        // Calculate the weekday of the first day (Sunday is 7, we want it to be 0)
+        // Weekday of first day (Sunday = 0)
         int startingWeekday = firstDayOfMonth.weekday % 7;
 
-        final daysToDisplay = <DateTime>[];
+        // Days to display (empty slots before 1st day)
+        final daysToDisplay = <DateTime?>[];
 
-        // Days from previous month
+        // Add empty cells before first day
         for (int i = 0; i < startingWeekday; i++) {
-          daysToDisplay.add(firstDayOfMonth.subtract(Duration(days: startingWeekday - i)));
+          daysToDisplay.add(null);
         }
 
-        // Days of the current month
-        for (int i = 0; i < daysInMonth; i++) {
-          daysToDisplay.add(firstDayOfMonth.add(Duration(days: i)));
-        }
-
-        // Days from next month to fill the grid (total 42 cells for 6 weeks)
-        final remainingCells = 42 - daysToDisplay.length;
-        final lastDayOfMonth = DateTime(focusedDate.year, focusedDate.month, daysInMonth);
-        for (int i = 0; i < remainingCells; i++) {
-          daysToDisplay.add(lastDayOfMonth.add(Duration(days: i + 1)));
+        // Add days of current month
+        for (int i = 1; i <= daysInMonth; i++) {
+          daysToDisplay.add(DateTime(focusedDate.year, focusedDate.month, i));
         }
 
         return GridView.builder(
@@ -203,9 +200,13 @@ class CalendarGrid extends StatelessWidget {
           itemCount: daysToDisplay.length,
           itemBuilder: (context, index) {
             final day = daysToDisplay[index];
+            if (day == null) {
+              // empty cell for alignment
+              return const SizedBox.shrink();
+            }
             return DayTile(
               day: day,
-              isCurrentMonth: day.month == focusedDate.month,
+              isCurrentMonth: true,
             );
           },
         );
@@ -213,6 +214,7 @@ class CalendarGrid extends StatelessWidget {
     );
   }
 }
+
 
 // 4. Day Tile (Each date cell)
 class DayTile extends StatelessWidget {

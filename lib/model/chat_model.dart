@@ -6,6 +6,8 @@ class ChatMessage {
   final DateTime? eventTime; // for event card
   final String? eventTitle;
   final bool? callMe;
+  final String? notification;
+  final String? note;
 
   ChatMessage({
     required this.message,
@@ -13,5 +15,7 @@ class ChatMessage {
     this.eventTime,
     this.eventTitle,
     this.callMe,
+    this.notification,
+    this.note,
   });
 }

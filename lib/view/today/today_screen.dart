@@ -20,16 +20,16 @@ class _TodayScreenState extends State<TodayScreen> {
   final ScrollController _mainScrollController = ScrollController();
   final ScrollController _scheduleScrollController = ScrollController();
   final ScrollController _timelineScrollController = ScrollController();
-  final double _hourHeight = 200.h;
-  final int _startHour = 1;
-  final int _endHour = 24;
+  final double _hourHeight = 100.h; // Reduced from 200.h for compact timeline
+  final int _defaultStartHour = 6;
+  final int _defaultEndHour = 23;
 
   Task? _draggedTask;
   bool _autoScrolling = false;
 
   // Auto-scroll settings
-  final double _scrollThreshold = 80; // px from top/bottom to start scrolling
-  final double _scrollSpeed = 10; // px per frame
+  final double _scrollThreshold = 80;
+  final double _scrollSpeed = 10;
 
   Offset? _pointerOffset;
 
@@ -37,7 +37,6 @@ class _TodayScreenState extends State<TodayScreen> {
   void initState() {
     super.initState();
 
-    // Synchronize timeline and schedule scrolling
     _scheduleScrollController.addListener(() {
       _timelineScrollController.jumpTo(_scheduleScrollController.offset);
     });
@@ -116,33 +115,63 @@ class _TodayScreenState extends State<TodayScreen> {
         ],
         reminders: [], // Explicitly set mutable list
       ),
+
+      Task(
+        id: '4',
+        title: 'Early Morning Task',
+        description: '',
+        startTime: today.add(const Duration(hours: 3)),
+        duration: const Duration(minutes: 30),
+        tags: [
+          Tag(
+              name: 'Personal',
+              backgroundColor: const Color(0xFFE8F5E9),
+              textColor: const Color(0xFF4CAF50)),
+        ],
+        reminders: [],
+      ),
     ];
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          controller: _mainScrollController,
-          child: Column(
-            children: [
-              _buildHeader(),
-              SizedBox(
-                height: (_endHour - _startHour + 1) * _hourHeight + 20.h,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildTimeline(),
-                    _buildScrollableDivider(),
-                    Expanded(child: _buildScheduleArea()),
-                  ],
-                ),
+    return Consumer<TaskProvider>(
+      builder: (context, taskProvider, _) {
+        // Determine timeline range based on tasks
+        int startHour = _defaultStartHour;
+        int endHour = _defaultEndHour;
+        for (var task in taskProvider.tasks) {
+          final taskHour = task.startTime.hour;
+          if (taskHour < startHour) startHour = 1;
+          if (taskHour >= endHour) endHour = 24;
+        }
+        startHour = startHour < _defaultStartHour ? 1 : _defaultStartHour;
+        endHour = endHour > _defaultEndHour ? 24 : _defaultEndHour;
+
+        return Scaffold(
+          body: SafeArea(
+            child: SingleChildScrollView(
+              controller: _mainScrollController,
+              child: Column(
+                children: [
+                  _buildHeader(),
+                  SizedBox(
+                    height: (endHour - startHour + 1) * _hourHeight + 20.h,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildTimeline(startHour, endHour),
+                        _buildScrollableDivider(startHour, endHour),
+                        Expanded(child: _buildScheduleArea(startHour, endHour)),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -164,13 +193,13 @@ class _TodayScreenState extends State<TodayScreen> {
           SizedBox(height: 16.h),
           Text(
             'Today',
-            style: TextStyle(fontSize: 34.sp, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 24.sp, fontWeight: FontWeight.bold),
           ),
           SizedBox(height: 6.h),
           Text(
             'Wednesday, October 1, 2025',
             style: TextStyle(
-                fontSize: 15.sp,
+                fontSize: 12.sp,
                 color: Colors.grey[600],
                 fontWeight: FontWeight.w500),
           ),
@@ -193,17 +222,17 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
-  Widget _buildTimeline() {
-    return Container(
+  Widget _buildTimeline(int startHour, int endHour) {
+    return SizedBox(
       width: 60.w,
-      padding: EdgeInsets.only(top: 97.h),
       child: SingleChildScrollView(
         controller: _timelineScrollController,
         physics: const NeverScrollableScrollPhysics(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
-          children: List.generate(_endHour - _startHour + 1, (index) {
-            final hour = _startHour + index;
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: List.generate(endHour - startHour + 1, (index) {
+            final hour = startHour + index;
             return SizedBox(
               height: _hourHeight,
               child: Text(
@@ -220,8 +249,7 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
-
-  Widget _buildScrollableDivider() {
+  Widget _buildScrollableDivider(int startHour, int endHour) {
     return Container(
       width: 1.w,
       color: Colors.grey[300],
@@ -231,7 +259,7 @@ class _TodayScreenState extends State<TodayScreen> {
         physics: const NeverScrollableScrollPhysics(),
         child: Column(
           children: List.generate(
-            _endHour - _startHour + 1,
+            endHour - startHour + 1,
                 (index) => Container(
               height: _hourHeight,
               color: Colors.grey[300],
@@ -242,9 +270,7 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
-
-
-  Widget _buildScheduleArea() {
+  Widget _buildScheduleArea(int startHour, int endHour) {
     return Consumer<TaskProvider>(
       builder: (context, taskProvider, _) {
         return Listener(
@@ -261,7 +287,7 @@ class _TodayScreenState extends State<TodayScreen> {
 
               final totalMinutes = (dy / _hourHeight) * 60;
               final snappedMinutes = (totalMinutes / 15).round() * 15;
-              final newHour = (snappedMinutes / 60).floor() + _startHour;
+              final newHour = (snappedMinutes / 60).floor() + startHour;
               final newMinute = snappedMinutes % 60;
 
               final task = details.data;
@@ -281,15 +307,15 @@ class _TodayScreenState extends State<TodayScreen> {
             builder: (context, candidateData, rejectedData) {
               return SingleChildScrollView(
                 controller: _scheduleScrollController,
-                child: Container(
-                  height: (_endHour - _startHour + 1) * _hourHeight,
+                child: SizedBox(
+                  height: (endHour - startHour + 1) * _hourHeight,
                   child: Stack(
                     children: [
-                      _buildTimeSlotLines(),
+                      _buildTimeSlotLines(startHour, endHour),
                       ...taskProvider.tasks.map((task) {
                         final minutesFromStart =
                             task.startTime.hour * 60 + task.startTime.minute;
-                        final startHourMinutes = _startHour * 60;
+                        final startHourMinutes = startHour * 60;
                         final topPosition =
                             ((minutesFromStart - startHourMinutes) / 60.0) *
                                 _hourHeight;
@@ -301,33 +327,34 @@ class _TodayScreenState extends State<TodayScreen> {
                           child: Stack(
                             clipBehavior: Clip.none,
                             children: [
-                              // ✅ Green bubble aligned with divider
+                              // Green bubble aligned with divider
                               Positioned(
-                                left: -6.w, // slightly outside the card, aligns with divider line
-                                top: 100.h, // adjust for vertical centering
+                                left: -6.w,
+                                top: 0,
                                 child: Container(
                                   width: 10.w,
                                   height: 10.w,
                                   decoration: const BoxDecoration(
-                                    color: Color(0xFF4CAF50), // green bubble
+                                    color: Color(0xFF4CAF50),
                                     shape: BoxShape.circle,
                                   ),
                                 ),
                               ),
-
-                              // ✅ Draggable schedule card
+                              // Draggable schedule card
                               LongPressDraggable<Task>(
                                 data: task,
                                 feedback: Material(
                                   color: Colors.transparent,
                                   child: Opacity(
                                     opacity: 0.9,
-                                    child: ScheduleCard(task: task, hourHeight: _hourHeight),
+                                    child: ScheduleCard(
+                                        task: task, hourHeight: _hourHeight),
                                   ),
                                 ),
                                 childWhenDragging: Opacity(
                                   opacity: 0.3,
-                                  child: ScheduleCard(task: task, hourHeight: _hourHeight),
+                                  child: ScheduleCard(
+                                      task: task, hourHeight: _hourHeight),
                                 ),
                                 onDragStarted: () {
                                   _draggedTask = task;
@@ -335,54 +362,22 @@ class _TodayScreenState extends State<TodayScreen> {
                                 },
                                 onDragEnd: (_) {
                                   _draggedTask = null;
+                                  _stopAutoScroll();
                                 },
                                 child: GestureDetector(
                                   onTap: () {
                                     context.push('/task-details', extra: task);
                                   },
                                   child: Padding(
-                                    padding: EdgeInsets.only(left: 5.w), // ✅ move right here
-                                    child: ScheduleCard(task: task, hourHeight: _hourHeight),
+                                    padding: EdgeInsets.only(left: 5.w),
+                                    child: ScheduleCard(
+                                        task: task, hourHeight: _hourHeight),
                                   ),
                                 ),
                               ),
                             ],
                           ),
                         );
-                        // return Positioned(
-                        //   top: topPosition,
-                        //   left: 0,
-                        //   right: 16.w,
-                        //   child: LongPressDraggable<Task>(
-                        //     data: task,
-                        //     feedback: Material(
-                        //       color: Colors.transparent,
-                        //       child: Opacity(
-                        //         opacity: 0.9,
-                        //         child: ScheduleCard(
-                        //             task: task, hourHeight: _hourHeight),
-                        //       ),
-                        //     ),
-                        //     childWhenDragging: Opacity(
-                        //       opacity: 0.3,
-                        //       child: ScheduleCard(
-                        //           task: task, hourHeight: _hourHeight),
-                        //     ),
-                        //     onDragStarted: () {
-                        //       _draggedTask = task;
-                        //       _startAutoScroll();
-                        //     },
-                        //     onDragEnd: (_) {
-                        //       _draggedTask = null;
-                        //     },
-                        //     child: GestureDetector(
-                        //       onTap: () {
-                        //         context.push('/task-details', extra: task);
-                        //       },
-                        //       child: ScheduleCard(task: task, hourHeight: _hourHeight),
-                        //     ),
-                        //   ),
-                        // );
                       }).toList(),
                     ],
                   ),
@@ -395,10 +390,10 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
-  Widget _buildTimeSlotLines() {
+  Widget _buildTimeSlotLines(int startHour, int endHour) {
     return Column(
       children: List.generate(
-        _endHour - _startHour + 1,
+        endHour - startHour + 1,
             (index) => Container(
           height: _hourHeight,
           decoration: BoxDecoration(
@@ -426,8 +421,7 @@ class _TodayScreenState extends State<TodayScreen> {
 
       // Scroll up if near top
       if (pointerY < _scrollThreshold) {
-        scrollDelta = -_scrollSpeed *
-            (1 - pointerY / _scrollThreshold);
+        scrollDelta = -_scrollSpeed * (1 - pointerY / _scrollThreshold);
       }
       // Scroll down if near bottom
       else if (pointerY > MediaQuery.of(context).size.height - _scrollThreshold) {

@@ -1,5 +1,3 @@
-// lib/res/components/schedule_card.dart
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
@@ -9,93 +7,96 @@ class ScheduleCard extends StatelessWidget {
   final Task task;
   final double hourHeight;
 
-  const ScheduleCard({
-    super.key,
-    required this.task,
-    required this.hourHeight,
-  });
+  const ScheduleCard({super.key, required this.task, required this.hourHeight});
 
   @override
   Widget build(BuildContext context) {
-    // Every card height = one hour slot
+    // Card height matches the timeline's hourHeight
     final double cardHeight = hourHeight;
 
-    return Container(
-      height: cardHeight,
-      padding: EdgeInsets.all(12.w),
-      margin: EdgeInsets.only(bottom: 4.h),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.grey[200]!),
-        borderRadius: BorderRadius.circular(12.r),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                DateFormat('h:mm a').format(task.startTime),
-                style: TextStyle(
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green[700],
-                ),
-              ),
-              Container(
-                width: 18.w,
-                height: 18.w,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFF4CAF50), width: 2.0),
-                ),
-              ),
-            ],
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
+    return ClipRect(
+      child: Container(
+        height: cardHeight,
+        padding: EdgeInsets.all(8.w), // Reduced from 12.w to help with overflow
+        margin: EdgeInsets.only(bottom: 2.h), // Reduced from 4.h
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: Colors.grey[200]!),
+          borderRadius: BorderRadius.circular(12.r),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  task.title,
+                  DateFormat('h:mm a').format(task.startTime),
                   style: TextStyle(
-                    fontSize: 16.sp,
+                    fontSize: 10.sp, // Reduced from 12.sp
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: Colors.green[700],
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-                SizedBox(height: 8.h),
-                Wrap(
-                  spacing: 8.w,
-                  runSpacing: 4.h,
-                  children: task.tags.map((tag) => _TagChip(tag: tag)).toList(),
+                Container(
+                  width: 14.w, // Reduced from 18.w
+                  height: 14.w, // Reduced from 18.w
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFF4CAF50),
+                      width: 2.0,
+                    ),
+                  ),
                 ),
               ],
             ),
-          ),
-          Row(
-            children: [
-              Icon(
-                Icons.notifications_none_outlined,
-                size: 14.sp,
-                color: Colors.grey[600],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    task.title,
+                    style: TextStyle(
+                      fontSize: 14.sp, // Reduced from 16.sp
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: 4.h), // Reduced from 8.h
+                  Wrap(
+                    spacing: 8.w, // Restored to original
+                    runSpacing: 4.h, // Restored to original
+                    children: task.tags
+                        .map((tag) => _TagChip(tag: tag))
+                        .toList(),
+                  ),
+                ],
               ),
-              SizedBox(width: 4.w),
-              Text(
-                _formatDuration(task.duration),
-                style: TextStyle(
-                  fontSize: 12.sp,
+            ),
+            Row(
+              children: [
+                Icon(
+                  Icons.notifications_none_outlined,
+                  size: 12.sp, // Reduced from 14.sp
                   color: Colors.grey[600],
-                  fontWeight: FontWeight.w500,
                 ),
-              ),
-            ],
-          ),
-        ],
+                SizedBox(width: 2.w), // Reduced from 4.w
+                Text(
+                  _formatDuration(task.duration),
+                  style: TextStyle(
+                    fontSize: 10.sp, // Reduced from 12.sp
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -111,7 +112,6 @@ class ScheduleCard extends StatelessWidget {
   }
 }
 
-
 class _TagChip extends StatelessWidget {
   final Tag tag;
   const _TagChip({required this.tag});
@@ -119,7 +119,10 @@ class _TagChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+      padding: EdgeInsets.symmetric(
+        horizontal: 8.w,
+        vertical: 4.h,
+      ), // Restored to original
       decoration: BoxDecoration(
         color: tag.backgroundColor,
         borderRadius: BorderRadius.circular(6.r),
@@ -128,7 +131,7 @@ class _TagChip extends StatelessWidget {
         tag.name,
         style: TextStyle(
           color: tag.textColor,
-          fontSize: 11.sp,
+          fontSize: 11.sp, // Restored to original
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -143,7 +146,10 @@ class _ReminderChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+      padding: EdgeInsets.symmetric(
+        horizontal: 8.w,
+        vertical: 4.h,
+      ), // Restored to original
       decoration: BoxDecoration(
         color: Colors.grey[200],
         borderRadius: BorderRadius.circular(6.r),
@@ -152,7 +158,7 @@ class _ReminderChip extends StatelessWidget {
         reminder,
         style: TextStyle(
           color: Colors.black87,
-          fontSize: 11.sp,
+          fontSize: 11.sp, // Restored to original
           fontWeight: FontWeight.w500,
         ),
       ),

@@ -171,48 +171,66 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       body: Column(
         children: [
           // 🔹 Search Bar
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: "Write or attach your pen...",
-                hintStyle: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 14.sp,
-                  color: Colors.grey[400],
-                ),
-                filled: true,
-                fillColor: Colors.grey[50],
-                suffixIcon: IconButton(
-                  onPressed: _pickFile,
-                  icon: Icon(
-                    Icons.attach_file,
-                    color: Colors.grey[600],
-                    size: 20.sp,
-                  ),
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(25.r),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(25.r),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(25.r),
-                  borderSide: BorderSide(color: AppColors.green!, width: 1.5),
-                ),
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 20.w,
-                  vertical: 14.h,
-                ),
+      Padding(
+      padding: EdgeInsets.only(
+      top: 50.h,
+        left: 16.w,
+        right: 16.w,
+        bottom: 12.h,
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12.r),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.3), // soft gray shadow
+              spreadRadius: 1,
+              blurRadius: 6,
+              offset: const Offset(0, 3), // downward shadow
+            ),
+          ],
+        ),
+        child: TextField(
+          controller: _searchController,
+          decoration: InputDecoration(
+            hintText: "Write or attach your pen...",
+            hintStyle: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 14.sp,
+              color: Colors.grey[400],
+            ),
+            filled: true,
+            fillColor: Colors.grey[50],
+            suffixIcon: IconButton(
+              onPressed: _pickFile,
+              icon: Icon(
+                Icons.attach_file,
+                color: Colors.grey[600],
+                size: 20.sp,
               ),
             ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(18.r),
+              borderSide: BorderSide.none, // no border, cleaner look
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(18.r),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(18.r),
+              borderSide: BorderSide(color: AppColors.green!, width: 1.5),
+            ),
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: 20.w,
+              vertical: 14.h,
+            ),
           ),
+        ),
+      ),
+    ),
 
-          // 🔹 Mic Section & Live Transcription
+    // 🔹 Mic Section & Live Transcription
           Expanded(
             child: Center(
               child: Column(

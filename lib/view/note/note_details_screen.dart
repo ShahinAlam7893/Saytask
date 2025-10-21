@@ -133,7 +133,7 @@ class NoteDetailsScreen extends StatelessWidget {
                         IconButton(
                           icon: Icon(
                             Icons.delete_outline,
-                            color: Colors.black,
+                            color: AppColors.red,
                             size: 24.sp,
                           ),
                           onPressed: () async {

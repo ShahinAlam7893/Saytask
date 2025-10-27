@@ -210,6 +210,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     return Scaffold(
       backgroundColor: AppColors.white,
       appBar: AppBar(
+        backgroundColor: AppColors.white,
         leading: IconButton(
           color: AppColors.black,
           icon: const Icon(Icons.arrow_back_ios_new_outlined),
@@ -243,6 +244,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                   duration: widget.task.duration,
                   tags: widget.task.tags,
                   reminders: widget.task.reminders ?? [],
+                  isCompleted: widget.task.isCompleted,
                 );
                 Provider.of<TaskProvider>(context, listen: false).updateTask(updatedTask);
               }
@@ -499,11 +501,6 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                 return Container(
                   width: double.infinity,
                   padding: EdgeInsets.all(12.w),
-                  // decoration: BoxDecoration(
-                  //   // color: Colors.grey.shade100, // Light background color
-                  //   border: Border.all(color: Colors.grey.shade400, width: 1), // Border color
-                  //   borderRadius: BorderRadius.circular(12.r), // Rounded corners
-                  // ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: reminders.isEmpty
@@ -538,18 +535,18 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                             ),
                             Container(
                               decoration: BoxDecoration(
-                                  color: Color(0xFFEF9937),
-                                  border: Border.all(color: Colors.grey.shade400, width: 1), // Border color
-                                  borderRadius: BorderRadius.circular(12.r), // Rounded corners
-                                ),
+                                color: Color(0xFFEF9937),
+                                border: Border.all(color: Colors.grey.shade400, width: 1),
+                                borderRadius: BorderRadius.circular(12.r),
+                              ),
                               child: IconButton(
                                 icon: const Icon(Icons.notifications_none, color: AppColors.white),
-                                onPressed: () {}, // TODO: Implement call action if needed
+                                onPressed: () {},
                               ),
                             ),
                             IconButton(
                               icon: const Icon(Icons.wifi_calling_3_outlined, color: AppColors.green),
-                              onPressed: () {}, // TODO: Implement call action if needed
+                              onPressed: () {},
                             ),
                             IconButton(
                               icon: const Icon(Icons.close, color: Colors.red),
@@ -641,6 +638,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                       duration: widget.task.duration,
                       tags: widget.task.tags,
                       reminders: widget.task.reminders ?? [],
+                      isCompleted: widget.task.isCompleted,
                     );
                     Provider.of<TaskProvider>(context, listen: false).updateTask(updatedTask);
                     context.pop();

@@ -16,9 +16,11 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final ScrollController _hintScrollController = ScrollController();
 
   bool isRecording = false;
   String? _selectedFileName;
@@ -27,48 +29,103 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
 
-  Timer? _mockSpeechTimer; // Simulated speech recognition timer
+  Timer? _mockSpeechTimer;
+  Timer? _hintScrollTimer;
+  String? _displayedHint = "";
+  Timer? _typingTimer;
+
+  void _startHintTypingAnimation(){
+    _typingTimer?.cancel();
+    _displayedHint = "";
+    int charIndex = 0;
+    String fullHint = _preRecordingHints[_hintIndex];
+
+    _typingTimer = Timer.periodic(const Duration(milliseconds: 80), (timer) {
+      if (charIndex < fullHint.length) {
+        setState(() {
+          _displayedHint = fullHint.substring(0, charIndex + 1);
+        });
+        charIndex++;
+      } else {
+        timer.cancel();
+
+        Future.delayed(const Duration(seconds: 2), () {
+          setState(() {
+            _hintIndex = (_hintIndex + 1) % _preRecordingHints.length;
+          });
+          _startHintTypingAnimation();
+        });
+      }
+    });
+  }
+
+
+  final List<String> _preRecordingHints = [
+    "Meeting today at 10 AM with Zen...",
+    "Set a medication reminder for 8 PM...",
+    "Plan weekend trip to the mountains...",
+    "Buy groceries on the way home...",
+  ];
+
+  int _hintIndex = 0;
 
   @override
   void initState() {
     super.initState();
 
-    // Setup pulsing mic animation
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 1),
-    )..addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        _animationController.reverse();
-      } else if (status == AnimationStatus.dismissed) {
-        _animationController.forward();
-      }
-    });
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
 
-    _scaleAnimation = Tween<double>(begin: 0.9, end: 1.1)
-        .animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
+    _scaleAnimation = Tween<double>(begin: 0.97, end: 1.03).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+
+    _startHintTypingAnimation();
+    // _startHintAutoScroll();
   }
+
+  // void _startHintAutoScroll() {
+  //   _hintScrollTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
+  //     if (_hintScrollController.hasClients) {
+  //       _hintScrollController
+  //           .animateTo(
+  //             _hintScrollController.position.maxScrollExtent,
+  //             duration: const Duration(seconds: 3),
+  //             curve: Curves.easeInOut,
+  //           )
+  //           .then((_) {
+  //             // Loop the scroll
+  //             _hintScrollController.jumpTo(0);
+  //           });
+  //     }
+  //
+  //     // change text index for effect
+  //     setState(() {
+  //       _hintIndex = (_hintIndex + 1) % _preRecordingHints.length;
+  //     });
+  //   });
+  // }
 
   @override
   void dispose() {
     _searchController.dispose();
     _animationController.dispose();
     _mockSpeechTimer?.cancel();
+    _typingTimer?.cancel();
+    // _hintScrollTimer?.cancel();
     _scrollController.dispose();
+    _hintScrollController.dispose();
     super.dispose();
   }
 
   Future<void> _pickFile() async {
     final result = await FilePicker.platform.pickFiles();
-
     if (result != null && result.files.isNotEmpty) {
       setState(() {
         _selectedFileName = result.files.single.name;
       });
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('File selected: ${result.files.single.name}'),
@@ -90,14 +147,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       isRecording = true;
       _transcribedText = "";
     });
-    _animationController.forward();
 
-    // 🔹 Simulate speech recognition stream
+    // 🔹 Simulate speech recognition
     const fakeSpeechChunks = [
       "Hello there...",
-      "I’m testing the SayTask voice feature...",
+      "I'm testing the SayTask voice feature...",
       "This should show live transcription.",
-      "Recording almost done..."
+      "Recording almost done...",
     ];
 
     int index = 0;
@@ -107,7 +163,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           _transcribedText += " ${fakeSpeechChunks[index]}";
         });
 
-        // 🔹 Auto-scroll to the end after updating text
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_scrollController.hasClients) {
             _scrollController.animateTo(
@@ -126,7 +181,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 
   void _stopRecording() {
-    _animationController.stop();
     _mockSpeechTimer?.cancel();
     setState(() {
       isRecording = false;
@@ -159,157 +213,142 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 color: Colors.black,
                 size: 24.sp,
               ),
-              onPressed: () {
-                context.push('/settings');
-              },
+              onPressed: () => context.push('/settings'),
             ),
           ],
         ),
       ),
 
-      // 🔹 Main body
       body: Column(
         children: [
           // 🔹 Search Bar
-      Padding(
-      padding: EdgeInsets.only(
-      top: 50.h,
-        left: 16.w,
-        right: 16.w,
-        bottom: 12.h,
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12.r),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.3), // soft gray shadow
-              spreadRadius: 1,
-              blurRadius: 6,
-              offset: const Offset(0, 3), // downward shadow
+          Padding(
+            padding: EdgeInsets.only(
+              top: 50.h,
+              left: 16.w,
+              right: 16.w,
+              bottom: 12.h,
             ),
-          ],
-        ),
-        child: TextField(
-          controller: _searchController,
-          decoration: InputDecoration(
-            hintText: "Write or attach your pen...",
-            hintStyle: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 14.sp,
-              color: Colors.grey[400],
-            ),
-            filled: true,
-            fillColor: Colors.grey[50],
-            suffixIcon: IconButton(
-              onPressed: _pickFile,
-              icon: Icon(
-                Icons.attach_file,
-                color: Colors.grey[600],
-                size: 20.sp,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12.r),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.3),
+                    spreadRadius: 1,
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: "Write or attach your pen...",
+                  hintStyle: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14.sp,
+                    color: Colors.grey[400],
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey[50],
+                  suffixIcon: IconButton(
+                    onPressed: _pickFile,
+                    icon: Icon(
+                      Icons.attach_file,
+                      color: Colors.grey[600],
+                      size: 20.sp,
+                    ),
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18.r),
+                    borderSide: BorderSide(
+                      color: AppColors.green!,
+                      width: 0.8.w,
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18.r),
+                    borderSide: BorderSide(
+                      color: AppColors.green!,
+                      width: 0.8.w,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18.r),
+                    borderSide: BorderSide(
+                      color: AppColors.green!,
+                      width: 0.8.w,
+                    ),
+                  ),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 20.w,
+                    vertical: 14.h,
+                  ),
+                ),
               ),
             ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(18.r),
-              borderSide: BorderSide.none, // no border, cleaner look
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(18.r),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(18.r),
-              borderSide: BorderSide(color: AppColors.green!, width: 1.5),
-            ),
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: 20.w,
-              vertical: 14.h,
-            ),
           ),
-        ),
-      ),
-    ),
 
-    // 🔹 Mic Section & Live Transcription
+          // 🔹 Mic Section
           Expanded(
             child: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  if (!isRecording) ...[
-                    GestureDetector(
-                      onTap: _startRecording,
+                  // 🔹 Pulsing mic (always animating)
+                  ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: GestureDetector(
+                      onTap: isRecording ? _stopRecording : _startRecording,
                       child: Container(
                         width: 160.w,
                         height: 160.w,
                         decoration: BoxDecoration(
-                          color: AppColors.green,
+                          color: isRecording ? Colors.red : AppColors.green,
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.green.withOpacity(0.3),
-                              blurRadius: 20,
+                              color:
+                                  (isRecording ? Colors.red : AppColors.green)
+                                      .withOpacity(0.4),
+                              blurRadius: 25,
                               spreadRadius: 5,
                             ),
                           ],
                         ),
                         child: Icon(
-                          Icons.mic,
+                          isRecording ? Icons.stop : Icons.mic,
                           color: Colors.white,
-                          size: 60.sp,
+                          size: isRecording ? 55.sp : 60.sp,
                         ),
                       ),
                     ),
-                    SizedBox(height: 24.h),
-                    RichText(
-                      text: TextSpan(
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 16.sp,
-                          color: Colors.black,
-                        ),
-                        children: const [
-                          TextSpan(text: 'Tap to '),
-                          TextSpan(
-                            text: 'saytask',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ] else ...[
-                    // 🔹 Animated Pulsing Mic Circle
-                    ScaleTransition(
-                      scale: _scaleAnimation,
-                      child: GestureDetector(
-                        onTap: _stopRecording,
-                        child: Container(
-                          width: 180.w,
-                          height: 180.w,
-                          decoration: BoxDecoration(
-                            color: AppColors.green,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.green.withOpacity(0.5),
-                                blurRadius: 30,
-                                spreadRadius: 8,
-                              ),
-                            ],
-                          ),
-                          child: Icon(
-                            Icons.mic,
-                            color: Colors.white,
-                            size: 70.sp,
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 30.h),
+                  ),
+                  SizedBox(height: 24.h),
 
-                    // 🔹 Auto-scrollable live transcription
+                  // 🔹 Text area
+                  if (!isRecording)
+                    SizedBox(
+                      height: 40.h,
+                      child: Center(
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          child: Text(
+                            _displayedHint!,
+                            key: ValueKey(_displayedHint),
+                            style: TextStyle(
+                              fontSize: 16.sp,
+                              color: AppColors.black,
+                              fontStyle: FontStyle.italic,
+                              fontFamily: 'Inter',
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    )
+                  else
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 20.w),
                       child: SizedBox(
@@ -320,14 +359,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           children: [
                             Center(
                               child: Text(
-                                _transcribedText.isEmpty
-                                    ? "Listening..."
-                                    : _transcribedText,
-                                textAlign: TextAlign.left,
+                                _transcribedText.isEmpty ? "Listening..." : _transcribedText,
                                 style: TextStyle(
                                   fontSize: 16.sp,
-                                  color: Colors.black87,
-                                  height: 1.4,
+                                  color: AppColors.black,
                                 ),
                               ),
                             ),
@@ -335,7 +370,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         ),
                       ),
                     ),
-                  ],
                 ],
               ),
             ),
@@ -343,25 +377,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ],
       ),
 
-      // 🔹 Floating Chat Button
       floatingActionButton: settingsViewModel.enableAIChatbot
           ? SizedBox(
-        width: 60.w,
-        height: 60.h,
-        child: FloatingActionButton(
-          onPressed: () {
-            context.push('/chat');
-          },
-          backgroundColor: AppColors.green,
-          shape: const CircleBorder(),
-          elevation: 4,
-          child: Icon(
-            Icons.chat,
-            color: Colors.white,
-            size: 28.sp,
-          ),
-        ),
-      )
+              width: 60.w,
+              height: 60.h,
+              child: FloatingActionButton(
+                onPressed: () => context.push('/chat'),
+                backgroundColor: AppColors.green,
+                shape: const CircleBorder(),
+                elevation: 4,
+                child: Icon(Icons.chat, color: Colors.white, size: 28.sp),
+              ),
+            )
           : null,
     );
   }
@@ -373,7 +400,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         onCancel: () => context.pop(context),
         onSave: () {
           context.pop(context);
-          // Add save logic here if needed
         },
       ),
     );

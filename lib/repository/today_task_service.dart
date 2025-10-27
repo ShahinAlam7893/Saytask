@@ -87,6 +87,7 @@ class TaskProvider extends ChangeNotifier {
         duration: task.duration,
         tags: task.tags,
         reminders: updatedReminders,
+        isCompleted: task.isCompleted,
       );
       _selectedCallReminders.remove(reminder);
       _selectedNotificationReminders.remove(reminder);
@@ -108,6 +109,7 @@ class TaskProvider extends ChangeNotifier {
         duration: task.duration,
         tags: task.tags,
         reminders: updatedReminders,
+        isCompleted: task.isCompleted,
       );
       print('Added reminder "$reminder" to task $taskId. New reminders: $updatedReminders');
       notifyListeners();
@@ -127,10 +129,12 @@ class TaskProvider extends ChangeNotifier {
         duration: task.duration,
         tags: updatedTags,
         reminders: task.reminders ?? [],
+        isCompleted: task.isCompleted,
       );
       notifyListeners();
     }
   }
+
 
   void updateTask(Task updatedTask) {
     final taskIndex = _tasks.indexWhere((t) => t.id == updatedTask.id);
@@ -140,13 +144,11 @@ class TaskProvider extends ChangeNotifier {
     }
   }
 
-  // ✅ Set initial list of tasks
   void setTasks(List<Task> tasks) {
     _tasks = tasks;
     notifyListeners();
   }
 
-  // ✅ Update only the start time of a specific task
   void updateTaskTime(String taskId, DateTime newStartTime) {
     final taskIndex = _tasks.indexWhere((t) => t.id == taskId);
     if (taskIndex != -1) {
@@ -155,10 +157,29 @@ class TaskProvider extends ChangeNotifier {
         id: task.id,
         title: task.title,
         description: task.description,
-        startTime: newStartTime, // updated
+        startTime: newStartTime,
         duration: task.duration,
         tags: task.tags,
         reminders: task.reminders ?? [],
+        isCompleted: task.isCompleted,
+      );
+      notifyListeners();
+    }
+  }
+
+  void toggleTaskCompletion(String taskId) {
+    final taskIndex = _tasks.indexWhere((t) => t.id == taskId);
+    if (taskIndex != -1) {
+      final task = _tasks[taskIndex];
+      _tasks[taskIndex] = Task(
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        startTime: task.startTime,
+        duration: task.duration,
+        tags: task.tags,
+        reminders: task.reminders ?? [],
+        isCompleted: !task.isCompleted,
       );
       notifyListeners();
     }

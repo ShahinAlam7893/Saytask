@@ -8,6 +8,7 @@ class Task {
   final Duration duration;
   final List<Tag> tags;
   List<String> reminders;
+  bool isCompleted;
 
   Task({
     required this.id,
@@ -17,7 +18,15 @@ class Task {
     required this.duration,
     required this.tags,
     this.reminders = const [],
+    this.isCompleted = false,
   });
+
+  // Check if task should be auto-completed
+  bool shouldBeCompleted() {
+    final now = DateTime.now();
+    final endTime = startTime.add(duration);
+    return now.isAfter(endTime);
+  }
 }
 
 class Tag {

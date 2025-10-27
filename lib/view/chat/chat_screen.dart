@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_advanced_switch/flutter_advanced_switch.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:saytask/model/chat_model.dart';
 import 'package:saytask/repository/chat_service.dart';
@@ -250,7 +251,7 @@ class _ChatPageState extends State<ChatPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text("Tomorrow",
-                    style: TextStyle(color: Colors.white70, fontSize: 14.sp)),
+                    style: TextStyle(color: AppColors.white, fontSize: 14.sp, fontWeight: FontWeight.w600)),
                 Text("All-day",
                     style: TextStyle(color: Colors.white70, fontSize: 14.sp)),
               ],
@@ -265,7 +266,7 @@ class _ChatPageState extends State<ChatPage> {
                   children: [
                     Icon(Icons.call, color: Colors.white70, size: 18.sp),
                     SizedBox(width: 10.w),
-                    Text("Call Me", style: TextStyle(color: Colors.white70)),
+                    Text("Call Me", style: TextStyle(color: Colors.white70, fontSize: 14.sp)),
                   ],
                 ),
                 AdvancedSwitch(
@@ -278,7 +279,7 @@ class _ChatPageState extends State<ChatPage> {
                 ),
               ],
             ),
-            SizedBox(height: 6.h),
+            // SizedBox(height: 4.h),
 
             // --- Notification Dropdown ---
             Row(
@@ -311,7 +312,7 @@ class _ChatPageState extends State<ChatPage> {
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(e, style: const TextStyle(color: Colors.white70)),
+                                  Text(e, style: TextStyle(color: Colors.white70, fontSize: 14.sp)),
                                   if (e == selectedReminder)
                                     const Icon(Icons.check, color: Colors.green, size: 18),
                                 ],
@@ -331,7 +332,7 @@ class _ChatPageState extends State<ChatPage> {
                 ),
               ],
             ),
-            SizedBox(height: 8.h),
+            // SizedBox(height: 8.h),
 
             // --- Note Row ---
             Row(
@@ -341,7 +342,7 @@ class _ChatPageState extends State<ChatPage> {
                 Expanded(
                   child: Text(
                     "Remember to ${msg.eventTitle?.toLowerCase()} tomorrow afternoon",
-                    style: TextStyle(color: Colors.white70),
+                    style: TextStyle(color: Colors.white70, fontSize: 14.sp),
                   ),
                 ),
               ],
@@ -351,13 +352,7 @@ class _ChatPageState extends State<ChatPage> {
             // --- Expandable Content ---
             if (isExpanded) ...[
               // --- Delete Button ---
-              IconButton(
-                onPressed: () {
-                  Provider.of<ChatViewModel>(context, listen: false)
-                      .deleteMessage(msg);
-                },
-                icon: Icon(Icons.delete_outline, color: AppColors.white, size: 28.sp),
-              ),
+
               Center(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -392,6 +387,23 @@ class _ChatPageState extends State<ChatPage> {
                 ),
               ),
               SizedBox(height: 6.h),
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      Provider.of<ChatViewModel>(context, listen: false)
+                          .deleteMessage(msg);
+                    },
+                    icon: Icon(Icons.delete_outline, color: AppColors.white, size: 20.sp),
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      // context.pushNamed('editEvent', extra: currentEvent);
+                    },
+                    icon: Icon(Icons.edit, color: AppColors.white, size: 20.sp),
+                  ),
+                ],
+              ),
             ],
           ],
         ),

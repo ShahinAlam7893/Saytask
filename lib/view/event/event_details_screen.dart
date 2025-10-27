@@ -31,7 +31,6 @@ class EventDetailsScreen extends StatelessWidget {
           );
         }
 
-        // Find the event in the provider using the ID
         final dateKey = DateTime.utc(event!.date.year, event!.date.month, event!.date.day);
         // Use the public selectedDayEvents or getEventsForDate
         final events = provider.selectedDayEvents.isNotEmpty &&

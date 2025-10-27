@@ -13,10 +13,11 @@ class VoiceRecordProvider with ChangeNotifier {
     _isRecording = true;
     notifyListeners();
 
+    // Simulate recording delay
     Future.delayed(const Duration(seconds: 3), () {
       _isRecording = false;
       _noteContent =
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam...";
+      "Lorem ipsum dolor sit amet, consectetur adipiscing elit...";
       _summary = '''
 • Try blue and orange for dashboard color
 • Talk with dev team about login page bug
@@ -24,6 +25,11 @@ class VoiceRecordProvider with ChangeNotifier {
 ''';
       notifyListeners();
     });
+  }
+
+  void stopRecording() {
+    _isRecording = false;
+    notifyListeners();
   }
 
   void resetRecording() {

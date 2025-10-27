@@ -20,9 +20,12 @@ class _TodayScreenState extends State<TodayScreen> {
   final ScrollController _mainScrollController = ScrollController();
   final ScrollController _scheduleScrollController = ScrollController();
   final ScrollController _timelineScrollController = ScrollController();
-  final double _hourHeight = 100.h; // Reduced from 200.h for compact timeline
+  final double _hourHeight = 120.h;
   final int _defaultStartHour = 6;
   final int _defaultEndHour = 23;
+
+  // View mode toggle
+  bool _isCompactView = false;
 
   Task? _draggedTask;
   bool _autoScrolling = false;
@@ -47,6 +50,22 @@ class _TodayScreenState extends State<TodayScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final taskProvider = Provider.of<TaskProvider>(context, listen: false);
       taskProvider.setTasks(_initializeTasks());
+      _startAutoCompletionTimer();
+    });
+  }
+
+  void _startAutoCompletionTimer() {
+    // Check every minute for tasks that should be auto-completed
+    Future.delayed(const Duration(minutes: 1), () {
+      if (mounted) {
+        final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+        for (var task in taskProvider.tasks) {
+          if (task.shouldBeCompleted() && !task.isCompleted) {
+            taskProvider.toggleTaskCompletion(task.id);
+          }
+        }
+        _startAutoCompletionTimer();
+      }
     });
   }
 
@@ -77,7 +96,8 @@ class _TodayScreenState extends State<TodayScreen> {
               backgroundColor: const Color(0xFFE3F2FD),
               textColor: const Color(0xFF42A5F5)),
         ],
-        reminders: [], // Explicitly set mutable list
+        reminders: [],
+        isCompleted: false,
       ),
       Task(
         id: '2',
@@ -95,7 +115,8 @@ class _TodayScreenState extends State<TodayScreen> {
               backgroundColor: const Color(0xFFE3F2FD),
               textColor: const Color(0xFF42A5F5)),
         ],
-        reminders: [], // Explicitly set mutable list
+        reminders: [],
+        isCompleted: false,
       ),
       Task(
         id: '3',
@@ -113,22 +134,46 @@ class _TodayScreenState extends State<TodayScreen> {
               backgroundColor: const Color(0xFFE3F2FD),
               textColor: const Color(0xFF42A5F5)),
         ],
-        reminders: [], // Explicitly set mutable list
+        reminders: [],
+        isCompleted: false,
       ),
-
       Task(
         id: '4',
-        title: 'Early Morning Task',
+        title: 'Morning coffee with client',
         description: '',
-        startTime: today.add(const Duration(hours: 3)),
-        duration: const Duration(minutes: 30),
+        startTime: today.add(const Duration(hours: 10)),
+        duration: const Duration(minutes: 45),
         tags: [
           Tag(
-              name: 'Personal',
-              backgroundColor: const Color(0xFFE8F5E9),
-              textColor: const Color(0xFF4CAF50)),
+              name: 'Work',
+              backgroundColor: const Color(0xFFEDE7F6),
+              textColor: const Color(0xFF7E57C2)),
+          Tag(
+              name: 'Important',
+              backgroundColor: const Color(0xFFE3F2FD),
+              textColor: const Color(0xFF42A5F5)),
         ],
         reminders: [],
+        isCompleted: false,
+      ),
+      Task(
+        id: '5',
+        title: 'Team-meeting preparation',
+        description: '',
+        startTime: today.add(const Duration(hours: 12)),
+        duration: const Duration(minutes: 45),
+        tags: [
+          Tag(
+              name: 'Work',
+              backgroundColor: const Color(0xFFEDE7F6),
+              textColor: const Color(0xFF7E57C2)),
+          Tag(
+              name: 'Important',
+              backgroundColor: const Color(0xFFE3F2FD),
+              textColor: const Color(0xFF42A5F5)),
+        ],
+        reminders: [],
+        isCompleted: false,
       ),
     ];
   }
@@ -137,45 +182,232 @@ class _TodayScreenState extends State<TodayScreen> {
   Widget build(BuildContext context) {
     return Consumer<TaskProvider>(
       builder: (context, taskProvider, _) {
-        // Determine timeline range based on tasks
-        int startHour = _defaultStartHour;
-        int endHour = _defaultEndHour;
-        for (var task in taskProvider.tasks) {
-          final taskHour = task.startTime.hour;
-          if (taskHour < startHour) startHour = 1;
-          if (taskHour >= endHour) endHour = 24;
+        if (_isCompactView) {
+          return _buildCompactView(taskProvider);
+        } else {
+          return _buildExpandedView(taskProvider);
         }
-        startHour = startHour < _defaultStartHour ? 1 : _defaultStartHour;
-        endHour = endHour > _defaultEndHour ? 24 : _defaultEndHour;
-
-        return Scaffold(
-          body: SafeArea(
-            child: SingleChildScrollView(
-              controller: _mainScrollController,
-              child: Column(
-                children: [
-                  _buildHeader(),
-                  SizedBox(
-                    height: (endHour - startHour + 1) * _hourHeight + 20.h,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildTimeline(startHour, endHour),
-                        _buildScrollableDivider(startHour, endHour),
-                        Expanded(child: _buildScheduleArea(startHour, endHour)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
       },
     );
   }
 
+  Widget _buildCompactView(TaskProvider taskProvider) {
+    // Sort tasks by start time
+    final sortedTasks = List<Task>.from(taskProvider.tasks)
+      ..sort((a, b) => a.startTime.compareTo(b.startTime));
+
+    return Scaffold(
+      backgroundColor: AppColors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: ListView.builder(
+                controller: _mainScrollController,
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                itemCount: sortedTasks.length,
+                itemBuilder: (context, index) {
+                  final task = sortedTasks[index];
+                  return Padding(
+                    padding: EdgeInsets.only(bottom: 12.h),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Time label
+                        SizedBox(
+                          width: 40.w,
+                          child: Text(
+                            DateFormat('h a').format(task.startTime),
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              color: AppColors.black,
+                              fontWeight: FontWeight.w700,
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                        ),
+                        // Green bubble
+                        Column(
+                          children: [
+                            SizedBox(height: 6.h),
+                            Container(
+                              width: 10.w,
+                              height: 10.w,
+                              decoration: BoxDecoration(
+                                color: task.isCompleted
+                                    ? Colors.grey[400]
+                                    : const Color(0xFF4CAF50),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(width: 12.w),
+                        // Task card
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              context.push('/task-details', extra: task);
+                            },
+                            child: _buildCompactTaskCard(task),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactTaskCard(Task task) {
+    return Container(
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: Colors.white, // always white, ignore completion
+        border: Border.all(color: Colors.grey[200]!),
+        borderRadius: BorderRadius.circular(12.r),
+      ),
+      child: Row(
+        children: [
+          // Task content
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  task.title,
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                    color:
+                    task.isCompleted ? Colors.grey[600] : Colors.black87,
+                    fontFamily: 'Poppins',
+                    decoration: task.isCompleted
+                        ? TextDecoration.lineThrough
+                        : null,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 8.h),
+                Wrap(
+                  spacing: 6.w,
+                  runSpacing: 4.h,
+                  children: task.tags
+                      .map((tag) => Container(
+                    padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                    decoration: BoxDecoration(
+                      color: tag.backgroundColor, // always tag color
+                      borderRadius: BorderRadius.circular(6.r),
+                    ),
+                    child: Text(
+                      tag.name,
+                      style: TextStyle(
+                        color: tag.textColor, // always tag color
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                  ))
+                      .toList(),
+                ),
+                SizedBox(height: 6.h),
+                Row(
+                  children: [
+                    Icon(Icons.access_time, size: 14.sp, color: Colors.grey[600]),
+                    SizedBox(width: 4.w),
+                    Text(
+                      _formatDuration(task.duration),
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          // Checkbox for completion
+          GestureDetector(
+            onTap: () {
+              Provider.of<TaskProvider>(context, listen: false)
+                  .toggleTaskCompletion(task.id);
+            },
+            child: Container(
+              width: 20.w,
+              height: 20.w,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: task.isCompleted ? Colors.grey[400]! : const Color(0xFF4CAF50),
+                  width: 2.0,
+                ),
+                color: task.isCompleted ? Colors.grey[400] : Colors.transparent,
+              ),
+              child: task.isCompleted
+                  ? Icon(Icons.check, size: 14.sp, color: Colors.white)
+                  : null,
+            ),
+          ),
+          SizedBox(width: 12.w),
+        ],
+      ),
+    );
+  }
+
+
+  Widget _buildExpandedView(TaskProvider taskProvider) {
+    // Determine timeline range based on tasks
+    int startHour = _defaultStartHour;
+    int endHour = _defaultEndHour;
+    for (var task in taskProvider.tasks) {
+      final taskHour = task.startTime.hour;
+      if (taskHour < startHour) startHour = 1;
+      if (taskHour >= endHour) endHour = 24;
+    }
+    startHour = startHour < _defaultStartHour ? 1 : _defaultStartHour;
+    endHour = endHour > _defaultEndHour ? 24 : _defaultEndHour;
+
+    return Scaffold(
+      backgroundColor: AppColors.white,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          controller: _mainScrollController,
+          child: Column(
+            children: [
+              _buildHeader(),
+              SizedBox(
+                height: (endHour - startHour + 1) * _hourHeight + 20.h,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildTimeline(startHour, endHour),
+                    _buildScrollableDivider(startHour, endHour),
+                    Expanded(child: _buildScheduleArea(startHour, endHour)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildHeader() {
+    final DateTime now = DateTime.now();
+    final String formattedDate = DateFormat('EEEE, MMMM d, y').format(now);
+
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
       child: Column(
@@ -188,34 +420,57 @@ class _TodayScreenState extends State<TodayScreen> {
                 height: 24.h,
                 width: 100.w,
               ),
+              Icon(Icons.settings_outlined,
+                  size: 24.sp, color: AppColors.black),
             ],
           ),
           SizedBox(height: 16.h),
           Text(
             'Today',
-            style: TextStyle(fontSize: 24.sp, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 24.sp,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Poppins',
+            ),
           ),
           SizedBox(height: 6.h),
           Text(
-            'Wednesday, October 1, 2025',
+            formattedDate,
             style: TextStyle(
-                fontSize: 12.sp,
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w500),
+              fontSize: 12.sp,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+              fontFamily: 'Poppins',
+            ),
           ),
           SizedBox(height: 10.h),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Compact View',
-                style: TextStyle(
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _isCompactView = !_isCompactView;
+              });
+            },
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  _isCompactView ? 'Expanded Schedule' : 'Compact View',
+                  style: TextStyle(
                     fontSize: 14.sp,
                     color: Colors.grey[800],
-                    fontWeight: FontWeight.w500),
-              ),
-              Icon(Icons.keyboard_arrow_up, color: Colors.grey[700]),
-            ],
+                    fontWeight: FontWeight.w500,
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+                Icon(
+                  _isCompactView
+
+                      ? Icons.keyboard_arrow_down
+                      : Icons.keyboard_arrow_up,
+                  color: Colors.grey[700],
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -238,9 +493,11 @@ class _TodayScreenState extends State<TodayScreen> {
               child: Text(
                 DateFormat('h a').format(DateTime(2025, 1, 1, hour)),
                 style: TextStyle(
-                    fontSize: 12.sp,
-                    color: AppColors.black,
-                    fontWeight: FontWeight.w700),
+                  fontSize: 12.sp,
+                  color: AppColors.black,
+                  fontWeight: FontWeight.w700,
+                  fontFamily: 'Poppins',
+                ),
               ),
             );
           }),
@@ -293,16 +550,22 @@ class _TodayScreenState extends State<TodayScreen> {
               final task = details.data;
               final oldTime = task.startTime;
 
-              taskProvider.updateTaskTime(
-                task.id,
-                DateTime(
-                  oldTime.year,
-                  oldTime.month,
-                  oldTime.day,
-                  newHour,
-                  newMinute,
-                ),
+              final newStartTime = DateTime(
+                oldTime.year,
+                oldTime.month,
+                oldTime.day,
+                newHour,
+                newMinute,
               );
+
+              taskProvider.updateTaskTime(task.id, newStartTime);
+
+              // Auto-reactivate if dragged to future time
+              final now = DateTime.now();
+              final newEndTime = newStartTime.add(task.duration);
+              if (task.isCompleted && now.isBefore(newEndTime)) {
+                taskProvider.toggleTaskCompletion(task.id);
+              }
             },
             builder: (context, candidateData, rejectedData) {
               return SingleChildScrollView(
@@ -334,8 +597,10 @@ class _TodayScreenState extends State<TodayScreen> {
                                 child: Container(
                                   width: 10.w,
                                   height: 10.w,
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFF4CAF50),
+                                  decoration: BoxDecoration(
+                                    color: task.isCompleted
+                                        ? Colors.grey[400]
+                                        : const Color(0xFF4CAF50),
                                     shape: BoxShape.circle,
                                   ),
                                 ),
@@ -347,8 +612,12 @@ class _TodayScreenState extends State<TodayScreen> {
                                   color: Colors.transparent,
                                   child: Opacity(
                                     opacity: 0.9,
-                                    child: ScheduleCard(
-                                        task: task, hourHeight: _hourHeight),
+                                    child: SizedBox(
+                                      width: MediaQuery.of(context).size.width -
+                                          100.w,
+                                      child: ScheduleCard(
+                                          task: task, hourHeight: _hourHeight),
+                                    ),
                                   ),
                                 ),
                                 childWhenDragging: Opacity(
@@ -370,8 +639,7 @@ class _TodayScreenState extends State<TodayScreen> {
                                   },
                                   child: Padding(
                                     padding: EdgeInsets.only(left: 5.w),
-                                    child: ScheduleCard(
-                                        task: task, hourHeight: _hourHeight),
+                                    child: _buildExpandedTaskCard(task),
                                   ),
                                 ),
                               ),
@@ -388,6 +656,129 @@ class _TodayScreenState extends State<TodayScreen> {
         );
       },
     );
+  }
+
+  Widget _buildExpandedTaskCard(Task task) {
+    return ClipRect(
+      child: Container(
+        height: _hourHeight,
+        padding: EdgeInsets.all(8.w),
+        margin: EdgeInsets.only(bottom: 2.h),
+        decoration: BoxDecoration(
+          color: Colors.white, // always white
+          border: Border.all(color: Colors.grey[200]!),
+          borderRadius: BorderRadius.circular(12.r),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    DateFormat('h:mm a').format(task.startTime),
+                    style: TextStyle(
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green[700], // always green
+                      fontFamily: 'Poppins',
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    task.title,
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.bold,
+                      color:
+                      task.isCompleted ? Colors.grey[600] : Colors.black87,
+                      fontFamily: 'Poppins',
+                      decoration: task.isCompleted
+                          ? TextDecoration.lineThrough
+                          : null,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: 4.h),
+                  Wrap(
+                    spacing: 8.w,
+                    runSpacing: 4.h,
+                    children: task.tags
+                        .map((tag) => Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                      decoration: BoxDecoration(
+                        color: tag.backgroundColor, // always tag color
+                        borderRadius: BorderRadius.circular(6.r),
+                      ),
+                      child: Text(
+                        tag.name,
+                        style: TextStyle(
+                          color: tag.textColor,
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                    ))
+                        .toList(),
+                  ),
+                  SizedBox(height: 4.h),
+                  Row(
+                    children: [
+                      Icon(Icons.notifications_none_outlined, size: 12.sp, color: Colors.grey[600]),
+                      SizedBox(width: 2.w),
+                      Text(
+                        _formatDuration(task.duration),
+                        style: TextStyle(
+                          fontSize: 10.sp,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            GestureDetector(
+              onTap: () {
+                Provider.of<TaskProvider>(context, listen: false)
+                    .toggleTaskCompletion(task.id);
+              },
+              child: Container(
+                width: 18.w,
+                height: 18.w,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: task.isCompleted ? Colors.grey[400]! : const Color(0xFF4CAF50),
+                    width: 2.0,
+                  ),
+                  color: task.isCompleted ? Colors.grey[400] : Colors.transparent,
+                ),
+                child: task.isCompleted
+                    ? Icon(Icons.check, size: 12.sp, color: Colors.white)
+                    : null,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
+  String _formatDuration(Duration duration) {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    if (hours > 0) {
+      return "${hours} hr, ${minutes} min";
+    } else {
+      return "${minutes} min";
+    }
   }
 
   Widget _buildTimeSlotLines(int startHour, int endHour) {
@@ -419,12 +810,10 @@ class _TodayScreenState extends State<TodayScreen> {
 
       double scrollDelta = 0;
 
-      // Scroll up if near top
       if (pointerY < _scrollThreshold) {
         scrollDelta = -_scrollSpeed * (1 - pointerY / _scrollThreshold);
-      }
-      // Scroll down if near bottom
-      else if (pointerY > MediaQuery.of(context).size.height - _scrollThreshold) {
+      } else if (pointerY >
+          MediaQuery.of(context).size.height - _scrollThreshold) {
         final distance =
             pointerY - (MediaQuery.of(context).size.height - _scrollThreshold);
         scrollDelta = _scrollSpeed * (1 + distance / _scrollThreshold);

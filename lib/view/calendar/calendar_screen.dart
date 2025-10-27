@@ -60,9 +60,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
           ],
         ),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: EdgeInsets.symmetric(horizontal: 12.w),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const CalendarHeader(),
             SizedBox(height: 20.h),
@@ -70,7 +71,30 @@ class _CalendarScreenState extends State<CalendarScreen> {
             const CalendarGrid(),
             SizedBox(height: 16.h),
             const EventListHeader(),
-            const Expanded(child: EventList()),
+            SizedBox(height: 8.h),
+
+            // 🔹 Instead of Expanded ListView, make it shrink-wrapped inside scroll
+            Consumer<CalendarProvider>(
+              builder: (context, provider, child) {
+                final events = provider.selectedDayEvents;
+                if (events.isEmpty) {
+                  return Padding(
+                    padding: EdgeInsets.only(top: 10.h, bottom: 30.h),
+                    child: const Center(child: Text("No events for this day.")),
+                  );
+                }
+                return ListView.builder(
+                  padding: EdgeInsets.only(top: 10.h, bottom: 30.h),
+                  physics: const NeverScrollableScrollPhysics(),
+                  shrinkWrap: true,
+                  itemCount: events.length,
+                  itemBuilder: (context, index) {
+                    final event = events[index];
+                    return EventCard(event: event);
+                  },
+                );
+              },
+            ),
           ],
         ),
       ),

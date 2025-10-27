@@ -56,7 +56,9 @@ class CreateNoteScreen extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  Icons.mic,
+                  recordProvider.isRecording
+                  ? Icons.stop
+                  : Icons.mic,
                   size: 48.sp,
                   color: Colors.white,
                 ),

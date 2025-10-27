@@ -30,7 +30,7 @@ import '../../view/settings/terms_and_condition.dart';
 import '../../view/settings/update_password.dart';
 
 final GoRouter router = GoRouter(
-  initialLocation: '/splash',
+  initialLocation: '/home',
   routes: [
     GoRoute(
       path: '/splash',

@@ -32,7 +32,7 @@ class AccountManagementScreen extends StatelessWidget {
               icon: Icon(
                 Icons.arrow_back,
                 color: Colors.black,
-                size: 16.sp,
+                size: 20.sp,
               ),
               onPressed: () {
                 Navigator.pop(context);

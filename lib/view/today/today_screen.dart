@@ -8,6 +8,7 @@ import 'package:saytask/res/color.dart';
 import '../../model/today_task_model.dart';
 import '../../repository/today_task_service.dart';
 import '../../res/components/schedule_card.dart';
+import 'dart:async';
 
 class TodayScreen extends StatefulWidget {
   const TodayScreen({super.key});
@@ -36,6 +37,9 @@ class _TodayScreenState extends State<TodayScreen> {
 
   Offset? _pointerOffset;
 
+  // Timer for auto-completion
+  Timer? _autoCompletionTimer;
+
   @override
   void initState() {
     super.initState();
@@ -55,22 +59,32 @@ class _TodayScreenState extends State<TodayScreen> {
   }
 
   void _startAutoCompletionTimer() {
-    // Check every minute for tasks that should be auto-completed
-    Future.delayed(const Duration(minutes: 1), () {
+    // Cancel any existing timer
+    _autoCompletionTimer?.cancel();
+
+    // Check every 30 seconds for tasks that should be auto-completed
+    _autoCompletionTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
       if (mounted) {
         final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+        final now = DateTime.now();
+
         for (var task in taskProvider.tasks) {
-          if (task.shouldBeCompleted() && !task.isCompleted) {
+          // Calculate end time of the task
+          final taskEndTime = task.startTime.add(task.duration);
+
+          // If current time is past the end time and task is not completed
+          if (now.isAfter(taskEndTime) && !task.isCompleted) {
+            print('Auto-completing task: ${task.title} (ended at ${DateFormat('h:mm a').format(taskEndTime)})');
             taskProvider.toggleTaskCompletion(task.id);
           }
         }
-        _startAutoCompletionTimer();
       }
     });
   }
 
   @override
   void dispose() {
+    _autoCompletionTimer?.cancel();
     _mainScrollController.dispose();
     _scheduleScrollController.dispose();
     _timelineScrollController.dispose();
@@ -78,13 +92,13 @@ class _TodayScreenState extends State<TodayScreen> {
   }
 
   List<Task> _initializeTasks() {
-    final today = DateTime(2025, 10, 1);
+    final today = DateTime.now();
     return [
       Task(
         id: '1',
         title: 'Buy groceries',
         description: '',
-        startTime: today.add(const Duration(hours: 7)),
+        startTime: DateTime(today.year, today.month, today.day, 7, 0),
         duration: const Duration(hours: 1, minutes: 30),
         tags: [
           Tag(
@@ -103,7 +117,7 @@ class _TodayScreenState extends State<TodayScreen> {
         id: '2',
         title: 'Office Meeting',
         description: 'This is our monthly report meeting',
-        startTime: today.add(const Duration(hours: 9)),
+        startTime: DateTime(today.year, today.month, today.day, 9, 0),
         duration: const Duration(hours: 1),
         tags: [
           Tag(
@@ -122,7 +136,7 @@ class _TodayScreenState extends State<TodayScreen> {
         id: '3',
         title: 'Client Meeting',
         description: '',
-        startTime: today.add(const Duration(hours: 11)),
+        startTime: DateTime(today.year, today.month, today.day, 11, 0),
         duration: const Duration(minutes: 45),
         tags: [
           Tag(
@@ -141,7 +155,7 @@ class _TodayScreenState extends State<TodayScreen> {
         id: '4',
         title: 'Morning coffee with client',
         description: '',
-        startTime: today.add(const Duration(hours: 10)),
+        startTime: DateTime(today.year, today.month, today.day, 10, 0),
         duration: const Duration(minutes: 45),
         tags: [
           Tag(
@@ -160,7 +174,7 @@ class _TodayScreenState extends State<TodayScreen> {
         id: '5',
         title: 'Team-meeting preparation',
         description: '',
-        startTime: today.add(const Duration(hours: 12)),
+        startTime: DateTime(today.year, today.month, today.day, 12, 0),
         duration: const Duration(minutes: 45),
         tags: [
           Tag(
@@ -269,7 +283,7 @@ class _TodayScreenState extends State<TodayScreen> {
     return Container(
       padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
-        color: Colors.white, // always white, ignore completion
+        color: Colors.white,
         border: Border.all(color: Colors.grey[200]!),
         borderRadius: BorderRadius.circular(12.r),
       ),
@@ -303,13 +317,13 @@ class _TodayScreenState extends State<TodayScreen> {
                       .map((tag) => Container(
                     padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                     decoration: BoxDecoration(
-                      color: tag.backgroundColor, // always tag color
+                      color: tag.backgroundColor,
                       borderRadius: BorderRadius.circular(6.r),
                     ),
                     child: Text(
                       tag.name,
                       style: TextStyle(
-                        color: tag.textColor, // always tag color
+                        color: tag.textColor,
                         fontSize: 11.sp,
                         fontWeight: FontWeight.bold,
                         fontFamily: 'Poppins',
@@ -464,7 +478,6 @@ class _TodayScreenState extends State<TodayScreen> {
                 ),
                 Icon(
                   _isCompactView
-
                       ? Icons.keyboard_arrow_down
                       : Icons.keyboard_arrow_up,
                   color: Colors.grey[700],
@@ -665,7 +678,7 @@ class _TodayScreenState extends State<TodayScreen> {
         padding: EdgeInsets.all(8.w),
         margin: EdgeInsets.only(bottom: 2.h),
         decoration: BoxDecoration(
-          color: Colors.white, // always white
+          color: Colors.white,
           border: Border.all(color: Colors.grey[200]!),
           borderRadius: BorderRadius.circular(12.r),
         ),
@@ -681,7 +694,7 @@ class _TodayScreenState extends State<TodayScreen> {
                     style: TextStyle(
                       fontSize: 10.sp,
                       fontWeight: FontWeight.bold,
-                      color: Colors.green[700], // always green
+                      color: Colors.green[700],
                       fontFamily: 'Poppins',
                     ),
                   ),
@@ -709,7 +722,7 @@ class _TodayScreenState extends State<TodayScreen> {
                         .map((tag) => Container(
                       padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                       decoration: BoxDecoration(
-                        color: tag.backgroundColor, // always tag color
+                        color: tag.backgroundColor,
                         borderRadius: BorderRadius.circular(6.r),
                       ),
                       child: Text(

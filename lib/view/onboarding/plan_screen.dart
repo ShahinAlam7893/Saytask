@@ -239,7 +239,7 @@ class PlanScreen extends StatelessWidget {
                           recognizer: TapGestureRecognizer()
                             ..onTap = () {
                               // Navigate to Terms page
-                              context.go('/terms_and_conditions');
+                              context.push('/terms_and_conditions');
                             },
                         ),
                         const TextSpan(text: '  •  '),
@@ -252,7 +252,7 @@ class PlanScreen extends StatelessWidget {
                           recognizer: TapGestureRecognizer()
                             ..onTap = () {
                               // Navigate to Privacy Policy page
-                              context.go('/privacy_policy');
+                              context.push('/privacy_policy');
                             },
                         ),
                       ],

@@ -201,213 +201,237 @@ class _ChatPageState extends State<ChatPage> {
     String selectedReminder = msg.notification ?? "At time of event";
 
     return StatefulBuilder(
-      builder: (context, setState) => Container(
-        margin: EdgeInsets.symmetric(vertical: 6.h),
-        padding: EdgeInsets.all(12.w),
-        decoration: BoxDecoration(
-          color: AppColors.secondaryTextColor,
-          borderRadius: BorderRadius.circular(15.r),
-          border: Border.all(color: Colors.grey.shade800, width: 1),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // --- Title Row with Expand Icon ---
-            Row(
-              children: [
-                Container(
-                  width: 4.w,
-                  height: 16.h,
-                  color: Colors.green,
-                ),
-                SizedBox(width: 8.w),
-                Expanded(
-                  child: Text(
-                    msg.eventTitle ?? "",
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      color: AppColors.white,
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => setState(() => isExpanded = !isExpanded),
-                  child: Icon(
-                    isExpanded
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down,
-                    color: Colors.white70,
-                    size: 20.sp,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 4.h),
-
-            // --- Date & All-day Row ---
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text("Tomorrow",
-                    style: TextStyle(color: AppColors.white, fontSize: 14.sp, fontWeight: FontWeight.w600)),
-                Text("All-day",
-                    style: TextStyle(color: Colors.white70, fontSize: 14.sp)),
-              ],
-            ),
-            SizedBox(height: 8.h),
-
-            // --- Call Me Row ---
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.call, color: Colors.white70, size: 18.sp),
-                    SizedBox(width: 10.w),
-                    Text("Call Me", style: TextStyle(color: Colors.white70, fontSize: 14.sp)),
-                  ],
-                ),
-                AdvancedSwitch(
-                  controller: switchController,
-                  activeColor: Colors.green,
-                  inactiveColor: Colors.grey,
-                  borderRadius: BorderRadius.circular(12.r),
-                  width: 50.w,
-                  height: 22.h,
-                ),
-              ],
-            ),
-            // SizedBox(height: 4.h),
-
-            // --- Notification Dropdown ---
-            Row(
-              children: [
-                Icon(Icons.notifications_none, color: Colors.white70, size: 18.sp),
-                SizedBox(width: 4.w),
-                Expanded(
-                  child: DropdownButtonHideUnderline(
-                    child: Row(
-                      children: [
-                        // Dropdown (without underline)
-                        Expanded(
-                          child: DropdownButton<String>(
-                            isExpanded: true,
-                            value: selectedReminder,
-                            dropdownColor: Colors.grey[850],
-                            icon: const SizedBox.shrink(), // Hide default icon
-                            items: [
-                              "At time of event",
-                              "5 minutes before",
-                              "10 minutes before",
-                              "15 minutes before",
-                              "30 minutes before",
-                              "1 hour before",
-                              "2 hours before",
-                              "13:00, 1 day before",
-                              "None",
-                            ].map((e) => DropdownMenuItem(
-                              value: e,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(e, style: TextStyle(color: Colors.white70, fontSize: 14.sp)),
-                                  if (e == selectedReminder)
-                                    const Icon(Icons.check, color: Colors.green, size: 18),
-                                ],
-                              ),
-                            ))
-                                .toList(),
-                            onChanged: (val) {
-                              if (val != null) setState(() => selectedReminder = val);
-                            },
-                          ),
-                        ),
-                        // Custom dropdown arrow icon at trailing
-                        Icon(Icons.arrow_drop_down, color: Colors.white70, size: 22.sp),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            // SizedBox(height: 8.h),
-
-            // --- Note Row ---
-            Row(
-              children: [
-                Icon(Icons.note_add_rounded, color: Colors.white70, size: 18.sp),
-                SizedBox(width: 4.w),
-                Expanded(
-                  child: Text(
-                    "Remember to ${msg.eventTitle?.toLowerCase()} tomorrow afternoon",
-                    style: TextStyle(color: Colors.white70, fontSize: 14.sp),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 8.h),
-
-            // --- Expandable Content ---
-            if (isExpanded) ...[
-              // --- Delete Button ---
-
-              Center(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    ElevatedButton(
-                      onPressed: () {},
-                      child: Text("Delay +1 hour"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey[800],
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                    SizedBox(height: 6.h),
-                    ElevatedButton(
-                      onPressed: () {},
-                      child: Text("Call me"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey[800],
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                    SizedBox(height: 6.h),
-                    ElevatedButton(
-                      onPressed: () {},
-                      child: Text("Remind 30 min before"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey[800],
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 6.h),
+      builder: (context, setState) => GestureDetector(
+        onTap: () => setState(() => isExpanded = !isExpanded),
+        child: Container(
+          margin: EdgeInsets.symmetric(vertical: 6.h),
+          padding: EdgeInsets.all(12.w),
+          decoration: BoxDecoration(
+            color: AppColors.secondaryTextColor,
+            borderRadius: BorderRadius.circular(15.r),
+            // border: Border.all(color: Colors.grey.shade800, width: 1),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // --- Title Row with Expand Icon ---
               Row(
                 children: [
-                  IconButton(
-                    onPressed: () {
-                      Provider.of<ChatViewModel>(context, listen: false)
-                          .deleteMessage(msg);
-                    },
-                    icon: Icon(Icons.delete_outline, color: AppColors.white, size: 20.sp),
+                  Container(width: 4.w, height: 16.h, color: Colors.green),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: Text(
+                      msg.eventTitle ?? "",
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        color: AppColors.white,
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
-                  IconButton(
-                    onPressed: () {
-                      // context.pushNamed('editEvent', extra: currentEvent);
-                    },
-                    icon: Icon(Icons.edit, color: AppColors.white, size: 20.sp),
+                  GestureDetector(
+                    onTap: () => setState(() => isExpanded = !isExpanded),
+                    child: Padding(
+                      padding: EdgeInsets.all(6.w),
+                      child: Icon(
+                        isExpanded
+                            ? Icons.keyboard_arrow_up_rounded
+                            : Icons.keyboard_arrow_down_rounded,
+                        color: Colors.white,
+                        size: 26.sp, // ✅ Bigger, more tappable
+                      ),
+                    ),
                   ),
                 ],
               ),
+              SizedBox(height: 4.h),
+
+              // --- Date & All-day Row ---
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Tomorrow",
+                    style: TextStyle(
+                        color: AppColors.white,
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w600),
+                  ),
+                  Text("All-day",
+                      style: TextStyle(color: Colors.white70, fontSize: 14.sp)),
+                ],
+              ),
+              SizedBox(height: 8.h),
+
+              // --- Call Me Row ---
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.call, color: Colors.white70, size: 18.sp),
+                      SizedBox(width: 10.w),
+                      Text("Call Me",
+                          style:
+                          TextStyle(color: Colors.white70, fontSize: 14.sp)),
+                    ],
+                  ),
+                  SizedBox(
+                    width: 60.w, // ✅ Larger tap area
+                    height: 30.h,
+                    child: AdvancedSwitch(
+                      controller: switchController,
+                      activeColor: Colors.green,
+                      inactiveColor: Colors.grey,
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 6.h),
+
+              // --- Notification Dropdown ---
+              Row(
+                children: [
+                  Icon(Icons.notifications_none,
+                      color: Colors.white70, size: 18.sp),
+                  SizedBox(width: 4.w),
+                  Expanded(
+                    child: DropdownButtonHideUnderline(
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButton<String>(
+                              isExpanded: true,
+                              value: selectedReminder,
+                              dropdownColor: Colors.grey[850],
+                              icon: const SizedBox.shrink(),
+                              items: [
+                                "At time of event",
+                                "5 minutes before",
+                                "10 minutes before",
+                                "15 minutes before",
+                                "30 minutes before",
+                                "1 hour before",
+                                "2 hours before",
+                                "13:00, 1 day before",
+                                "None",
+                              ].map((e) {
+                                return DropdownMenuItem(
+                                  value: e,
+                                  child: Row(
+                                    mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(e,
+                                          style: TextStyle(
+                                              color: Colors.white70,
+                                              fontSize: 14.sp)),
+                                      if (e == selectedReminder)
+                                        const Icon(Icons.check,
+                                            color: Colors.green, size: 18),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setState(() => selectedReminder = val);
+                                }
+                              },
+                            ),
+                          ),
+                          Icon(Icons.arrow_drop_down,
+                              color: Colors.white70, size: 26.sp), // ✅ Bigger
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 8.h),
+
+              // --- Note Row ---
+              Row(
+                children: [
+                  Icon(Icons.note_add_rounded,
+                      color: Colors.white70, size: 18.sp),
+                  SizedBox(width: 4.w),
+                  Expanded(
+                    child: Text(
+                      "Remember to ${msg.eventTitle?.toLowerCase()} tomorrow afternoon",
+                      style:
+                      TextStyle(color: Colors.white70, fontSize: 14.sp),
+                    ),
+                  ),
+                ],
+              ),
+
+              // --- Expandable Section ---
+              if (isExpanded) ...[
+                SizedBox(height: 12.h),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildMiniActionButton("Delay +1 hr", Icons.access_time),
+                    _buildMiniActionButton("Call Me", Icons.call),
+                    _buildMiniActionButton(
+                        "Remind 30 min", Icons.notifications_active),
+                  ],
+                ),
+                SizedBox(height: 10.h),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        Provider.of<ChatViewModel>(context, listen: false)
+                            .deleteMessage(msg);
+                      },
+                      icon: Icon(Icons.delete_outline,
+                          color: AppColors.white, size: 22.sp),
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        // ✅ Navigate to Task Details page
+                        // context.pushNamed('taskDetails', extra: msg);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                            content: Text(
+                              'Navigating to details of (This part depents on Backend and AI part)',
+                              style: TextStyle(fontSize: 14.sp),
+                            ),
+                            duration: Duration(seconds: 4),
+                          )
+                        );
+                      },
+                      icon: Icon(Icons.edit, color: AppColors.white, size: 22.sp),
+                    ),
+                  ],
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
   }
+
+  Widget _buildMiniActionButton(String text, IconData icon) {
+    return ElevatedButton.icon(
+      onPressed: () {},
+      icon: Icon(icon, size: 14.sp, color: Colors.white),
+      label: Text(
+        text,
+        style: TextStyle(fontSize: 12.sp, color: Colors.white),
+      ),
+      style: ElevatedButton.styleFrom(
+        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+        backgroundColor: Colors.grey[800],
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+      ),
+    );
+  }
+
 }

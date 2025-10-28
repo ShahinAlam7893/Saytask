@@ -295,8 +295,8 @@ class _HomeScreenState extends State<HomeScreen>
             child: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // 🔹 Pulsing mic (always animating)
                   ScaleTransition(
                     scale: _scaleAnimation,
                     child: GestureDetector(
@@ -309,11 +309,11 @@ class _HomeScreenState extends State<HomeScreen>
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color:
-                                  (isRecording ? Colors.red : AppColors.green)
-                                      .withOpacity(0.4),
-                              blurRadius: 25,
-                              spreadRadius: 5,
+                              color: (isRecording ? Colors.red : AppColors.green)
+                                  .withOpacity(0.4),
+                              blurRadius: 25.r,
+                              spreadRadius: 5.r,
+                              offset: Offset(0, 4.h),
                             ),
                           ],
                         ),
@@ -327,53 +327,61 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                   SizedBox(height: 24.h),
 
-                  // 🔹 Text area
-                  if (!isRecording)
-                    SizedBox(
-                      height: 40.h,
-                      child: Center(
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 300),
-                          child: Text(
-                            _displayedHint!,
-                            key: ValueKey(_displayedHint),
-                            style: TextStyle(
-                              fontSize: 16.sp,
-                              color: AppColors.black,
-                              fontStyle: FontStyle.italic,
-                              fontFamily: 'Inter',
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                    )
-                  else
-                    Padding(
+                  // 🔹 Text area (Hint or Transcribed Text)
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: isRecording
+                        ? Padding(
                       padding: EdgeInsets.symmetric(horizontal: 20.w),
                       child: SizedBox(
                         height: 60.h,
                         child: ListView(
                           controller: _scrollController,
                           scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
                           children: [
                             Center(
                               child: Text(
-                                _transcribedText.isEmpty ? "Listening..." : _transcribedText,
+                                _transcribedText.isEmpty
+                                    ? "Listening..."
+                                    : _transcribedText,
                                 style: TextStyle(
                                   fontSize: 16.sp,
                                   color: AppColors.black,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w400,
                                 ),
+                                textAlign: TextAlign.center,
+                                overflow: TextOverflow.fade,
                               ),
                             ),
                           ],
                         ),
                       ),
+                    )
+                        : SizedBox(
+                      height: 40.h,
+                      child: Center(
+                        child: Text(
+                          _displayedHint ?? "",
+                          key: ValueKey(_displayedHint),
+                          style: TextStyle(
+                            fontSize: 16.sp,
+                            color: AppColors.black,
+                            fontStyle: FontStyle.italic,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w400,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
                     ),
+                  ),
                 ],
               ),
             ),
           ),
+
         ],
       ),
 

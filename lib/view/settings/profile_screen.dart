@@ -38,7 +38,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             child: IconButton(
               padding: EdgeInsets.zero,
-              icon: Icon(Icons.arrow_back, color: Colors.black, size: 16.sp),
+              icon: Icon(Icons.arrow_back, color: Colors.black, size: 20.sp),
               onPressed: () {
                 Navigator.pop(context);
               },

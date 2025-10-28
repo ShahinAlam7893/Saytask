@@ -59,11 +59,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: Container(
-                      height: 24.h,
-                      width: 24.w,
+                      height: 30.h,
+                      width: 30.w,
                       decoration: BoxDecoration(
                         color: AppColors.white,
-                        borderRadius: BorderRadius.circular(12.r),
+                        borderRadius: BorderRadius.circular(50.r),
                         border: Border.all(
                           color: AppColors.black,
                           width: 1.0,
@@ -77,7 +77,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           child: Icon(
                             Icons.arrow_back,
                             color: AppColors.black,
-                            size: 14.sp,
+                            size: 20.sp,
                           ),
                         ),
                       ),

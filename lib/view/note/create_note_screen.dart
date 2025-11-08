@@ -7,6 +7,7 @@ import 'package:saytask/res/color.dart';
 import 'package:saytask/model/note_model.dart';
 import 'package:saytask/repository/notes_service.dart';
 import 'package:go_router/go_router.dart';
+import 'package:saytask/res/components/nab_bar.dart';
 
 class CreateNoteScreen extends StatelessWidget {
   const CreateNoteScreen({super.key});

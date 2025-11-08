@@ -71,7 +71,7 @@ class EditNoteViewModel with ChangeNotifier {
 }
 
 class NoteDetailsScreen extends StatelessWidget {
-  const NoteDetailsScreen({super.key});
+  const NoteDetailsScreen({super.key, required Note note});
 
   @override
   Widget build(BuildContext context) {

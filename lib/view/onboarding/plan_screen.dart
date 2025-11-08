@@ -22,8 +22,8 @@ class PlanScreen extends StatelessWidget {
           leading: Padding(
             padding: EdgeInsets.all(12.w),
             child: Container(
-              height: 24.h,
-              width: 24.w,
+              height: 20.h,
+              width: 20.w,
               decoration: BoxDecoration(
                 color: Colors.white,
                 shape: BoxShape.circle,
@@ -62,8 +62,6 @@ class PlanScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  SizedBox(height: 20.h),
-
                   Text(
                     "Choose Your Perfect Plan",
                     textAlign: TextAlign.center,
@@ -74,7 +72,7 @@ class PlanScreen extends StatelessWidget {
                       color: AppColors.black,
                     ),
                   ),
-                  SizedBox(height: 6.h),
+                  // SizedBox(height: 6.h),
                   Text(
                     "You can cancel anytime.",
                     style: TextStyle(
@@ -84,12 +82,12 @@ class PlanScreen extends StatelessWidget {
                     ),
                   ),
 
-                  SizedBox(height: 24.h),
+                  SizedBox(height: 6.h),
 
                   /// --- Toggle Switch ---
                   Container(
                     width: double.infinity,
-                    padding: EdgeInsets.all(4.w),
+                    padding: EdgeInsets.all(2.w),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF1F3F5),
                       borderRadius: BorderRadius.circular(30.r),
@@ -178,14 +176,14 @@ class PlanScreen extends StatelessWidget {
                     ),
                   ),
 
-                  SizedBox(height: 30.h),
+                  SizedBox(height: 6.h),
 
                   /// --- Plan Cards ---
                   _buildPlanCard(
                     title: "Free",
                     titleColor: Colors.black,
                     price: "\$0.00",
-                    period: viewModel.isMonthly ? "/Monthly" : "/Annually",
+                    period: viewModel.isMonthly ? "/Monthly" : "/Monthly",
                     description:
                     "14 events & reminders per week\n3 personal notes per week\nWhatsapp assistant\nUnlimited notifications\nScheduling conflict detection\nCreate events with text, video, or images\nNo credit card required",
                     buttonText: "Get Started",
@@ -198,7 +196,7 @@ class PlanScreen extends StatelessWidget {
                     title: "Premium",
                     titleColor: const Color(0xFF00A86B),
                     price: viewModel.isMonthly ? "\$8.99" : "\$6.99",
-                    period: viewModel.isMonthly ? "/Monthly" : "/Annually",
+                    period: viewModel.isMonthly ? "/Monthly" : "/Monthly",
                     description:
                     "56 events & reminders per week\n20 personal notes per week\nWhatsapp assistant\nUnlimited notifications\nScheduling conflict detection\nCreate events with text, video, or images\nCancel anytime",
                     buttonText: "Choose Plan",
@@ -210,7 +208,7 @@ class PlanScreen extends StatelessWidget {
                     title: "Unlimited",
                     titleColor: const Color(0xFFFF9800),
                     price: viewModel.isMonthly ? "\$19.99" : "\$14.99",
-                    period: viewModel.isMonthly ? "/Monthly" : "/Annually",
+                    period: viewModel.isMonthly ? "/Monthly" : "/Monthly",
                     description:
                     "Unlimited events & reminders\nUnlimited personal notes\nWhatsapp assistant\nUnlimited notifications\nScheduling conflict detection\nCreate events with text, video, or images\nCancel anytime",
                     buttonText: "Choose Plan",
@@ -220,7 +218,7 @@ class PlanScreen extends StatelessWidget {
                     borderColor: const Color(0xFFFFC107),
                   ),
 
-                  SizedBox(height: 20.h),
+
 
                   RichText(
                     textAlign: TextAlign.center,
@@ -258,8 +256,7 @@ class PlanScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-
-                  SizedBox(height: 30.h),
+                  SizedBox(height: 80.h),
                 ],
               ),
             );
@@ -299,7 +296,7 @@ class PlanScreen extends StatelessWidget {
             ],
           ),
           child: Padding(
-            padding: EdgeInsets.all(16.w),
+            padding: EdgeInsets.all(12.w),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -342,7 +339,7 @@ class PlanScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                SizedBox(height: 12.h),
+                SizedBox(height: 10.h),
                 ...description.split('\n').map(
                       (line) => Padding(
                     padding: EdgeInsets.only(bottom: 4.h),
@@ -352,7 +349,7 @@ class PlanScreen extends StatelessWidget {
                         Icon(
                           Icons.check,
                           color: titleColor,
-                          size: 16,
+                          size: 14,
                         ),
                         SizedBox(width: 6.w),
                         Expanded(
@@ -371,7 +368,7 @@ class PlanScreen extends StatelessWidget {
                   ),
                 ),
 
-                SizedBox(height: 16.h),
+                SizedBox(height: 12.h),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(

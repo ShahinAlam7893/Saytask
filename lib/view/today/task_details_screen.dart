@@ -221,16 +221,16 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               final save = await showDialog<bool>(
                 context: context,
                 builder: (ctx) => AlertDialog(
-                  title: const Text('Unsaved Changes'),
-                  content: const Text('Do you want to save changes before leaving?'),
+                  title: const Text('Unsaved Changes', style: TextStyle(color: AppColors.white),),
+                  content: const Text('Do you want to save changes before leaving?', style: TextStyle(color: AppColors.white)),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('Discard'),
+                      child: const Text('Discard',style: TextStyle(color: AppColors.white)),
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text('Save'),
+                      child: const Text('Save', style: TextStyle(color: AppColors.white)),
                     ),
                   ],
                 ),
@@ -597,16 +597,16 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                     final confirm = await showDialog<bool>(
                       context: context,
                       builder: (ctx) => AlertDialog(
-                        title: const Text('Delete Task?'),
-                        content: const Text('This action cannot be undone.'),
+                        title: const Text('Delete Task?', style: TextStyle(color: AppColors.white),),
+                        content: const Text('This action cannot be undone.', style: TextStyle(color: AppColors.white)),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(ctx, false),
-                            child: const Text('Cancel'),
+                            child: const Text('Cancel', style: TextStyle(color: AppColors.white)),
                           ),
                           TextButton(
                             onPressed: () => Navigator.pop(ctx, true),
-                            child: const Text('Delete'),
+                            child: const Text('Delete', style: TextStyle(color: AppColors.white)),
                           ),
                         ],
                       ),
@@ -660,6 +660,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
           ],
         ),
       ),
+
     );
   }
 }

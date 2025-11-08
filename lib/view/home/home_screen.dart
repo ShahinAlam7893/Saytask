@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:saytask/repository/settings_service.dart';
 import 'package:saytask/res/color.dart';
+import 'package:saytask/res/components/speak_screen/event_card.dart';
 import '../../res/components/recording_completing_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -34,7 +35,7 @@ class _HomeScreenState extends State<HomeScreen>
   String? _displayedHint = "";
   Timer? _typingTimer;
 
-  void _startHintTypingAnimation(){
+  void _startHintTypingAnimation() {
     _typingTimer?.cancel();
     _displayedHint = "";
     int charIndex = 0;
@@ -58,7 +59,6 @@ class _HomeScreenState extends State<HomeScreen>
       }
     });
   }
-
 
   final List<String> _preRecordingHints = [
     "Meeting today at 10 AM with Zen...",
@@ -309,8 +309,9 @@ class _HomeScreenState extends State<HomeScreen>
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: (isRecording ? Colors.red : AppColors.green)
-                                  .withOpacity(0.4),
+                              color:
+                                  (isRecording ? Colors.red : AppColors.green)
+                                      .withOpacity(0.4),
                               blurRadius: 25.r,
                               spreadRadius: 5.r,
                               offset: Offset(0, 4.h),
@@ -320,68 +321,90 @@ class _HomeScreenState extends State<HomeScreen>
                         child: Icon(
                           isRecording ? Icons.stop : Icons.mic,
                           color: Colors.white,
-                          size: isRecording ? 55.sp : 60.sp,
+                          size: 60.sp,
                         ),
                       ),
                     ),
                   ),
                   SizedBox(height: 24.h),
+                  RichText(
+                    text: TextSpan(
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16.sp,
+                        color: Colors.black,
+                      ),
+                      children: [
+                        const TextSpan(text: 'Tap to '),
+                        WidgetSpan(
+                          alignment: PlaceholderAlignment.middle,
+                          child: SvgPicture.asset(
+                            'assets/images/Saytask_logo_without_icon.svg',
+                            height: 18.h,
+                            width: 18.w,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
 
                   // 🔹 Text area (Hint or Transcribed Text)
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    child: isRecording
-                        ? Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 20.w),
-                      child: SizedBox(
-                        height: 60.h,
-                        child: ListView(
-                          controller: _scrollController,
-                          scrollDirection: Axis.horizontal,
-                          physics: const BouncingScrollPhysics(),
-                          children: [
-                            Center(
-                              child: Text(
-                                _transcribedText.isEmpty
-                                    ? "Listening..."
-                                    : _transcribedText,
-                                style: TextStyle(
-                                  fontSize: 16.sp,
-                                  color: AppColors.black,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w400,
+                  SizedBox(
+                    height: 60.h,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: isRecording
+                          ? Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 20.w),
+                              child: SizedBox(
+                                height: 60.h,
+                                child: ListView(
+                                  controller: _scrollController,
+                                  scrollDirection: Axis.horizontal,
+                                  physics: const BouncingScrollPhysics(),
+                                  children: [
+                                    Center(
+                                      child: Text(
+                                        _transcribedText.isEmpty
+                                            ? "Listening..."
+                                            : _transcribedText,
+                                        style: TextStyle(
+                                          fontSize: 16.sp,
+                                          color: AppColors.black,
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                        overflow: TextOverflow.fade,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                textAlign: TextAlign.center,
-                                overflow: TextOverflow.fade,
+                              ),
+                            )
+                          : SizedBox(
+                              height: 40.h,
+                              child: Center(
+                                child: Text(
+                                  _displayedHint ?? "",
+                                  key: ValueKey(_displayedHint),
+                                  style: TextStyle(
+                                    fontSize: 16.sp,
+                                    color: AppColors.green,
+                                    fontStyle: FontStyle.italic,
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    )
-                        : SizedBox(
-                      height: 40.h,
-                      child: Center(
-                        child: Text(
-                          _displayedHint ?? "",
-                          key: ValueKey(_displayedHint),
-                          style: TextStyle(
-                            fontSize: 16.sp,
-                            color: AppColors.black,
-                            fontStyle: FontStyle.italic,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w400,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
                     ),
                   ),
                 ],
               ),
             ),
           ),
-
         ],
       ),
 
@@ -404,12 +427,40 @@ class _HomeScreenState extends State<HomeScreen>
   void _showRecordingCompleteDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => RecordingCompleteDialog(
-        onCancel: () => context.pop(context),
-        onSave: () {
-          context.pop(context);
-        },
-      ),
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.5),
+      builder: (context) {
+        return Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Align(
+                  alignment: Alignment.topRight,
+                  child: GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Container(
+                      padding: EdgeInsets.all(6.w),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.close, color: Colors.black, size: 22.sp),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 8.h),
+                SpeackEventCard(
+                  eventTitle: "Voice Summary",
+                  note:
+                  "You said: ${_transcribedText.trim().isEmpty ? "No speech detected" : _transcribedText.trim()}",
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

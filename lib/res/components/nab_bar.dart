@@ -2,7 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-
+import 'package:provider/provider.dart'; // ADD
+import 'package:saytask/repository/speech_provider.dart';
 import 'package:saytask/view/home/home_screen.dart';
 import 'package:saytask/view/today/today_screen.dart';
 import 'package:saytask/view/calendar/calendar_screen.dart';
@@ -31,7 +32,6 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
   late ValueNotifier<bool> _isRecordingNotifier;
   late ValueNotifier<bool> _showEventCardNotifier;
 
-  // Only the 4 real pages – mic button is NOT a page
   List<Widget> get _pages => const [
     HomeScreen(),
     TodayScreen(),
@@ -39,7 +39,6 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
     NotesScreen(),
   ];
 
-  // Routes for the 4 real pages (mic has no route)
   final List<String> _routes = [
     '/home',
     '/today',
@@ -59,7 +58,6 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
   @override
   void didUpdateWidget(SmoothNavigationWrapper oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Update current index when initialIndex changes (e.g., when navigating via GoRouter)
     if (widget.initialIndex != oldWidget.initialIndex) {
       setState(() {
         _currentIndex = widget.initialIndex;
@@ -81,43 +79,44 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
   }
 
   void _onTabTapped(int index) {
-    // ---------- Mic button (index == 2) ----------
     if (index == 2) {
+      final speech = context.read<SpeechProvider>();
+
       if (_isRecordingNotifier.value) {
-        // If already recording → Stop and show confirmation popup
+        // STOP
+        speech.stopListening();
         _isRecordingNotifier.value = false;
         _showEventCardNotifier.value = true;
       } else {
-        // Start recording
-        _isRecordingNotifier.value = true;
-        _showEventCardNotifier.value = false;
+        // START
+        final started = speech.startListening();
+        if (started is Future) {
+          started.then((success) {
+            if (success) {
+              _isRecordingNotifier.value = true;
+            }
+          });
+        } else {
+          _isRecordingNotifier.value = true;
+        }
       }
       HapticFeedback.mediumImpact();
       return;
     }
 
-    // Map real page index (0-3) to displayed tab index (0,1,3,4)
     final int realPageIndex = index < 2 ? index : index - 1;
 
-    // If a detail/child page is shown, use GoRouter
     if (widget.child != null) {
       context.go(_routes[realPageIndex]);
       return;
     }
 
-    // Normal PageView navigation
     setState(() {
       _currentIndex = realPageIndex;
       _isRecordingNotifier.value = false;
       _showEventCardNotifier.value = false;
     });
     _pageController.jumpToPage(realPageIndex);
-  }
-
-
-  void _stopRecording() {
-    _isRecordingNotifier.value = false;
-    _showEventCardNotifier.value = false;
   }
 
   @override
@@ -130,17 +129,16 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
       child: Scaffold(
         body: Stack(
           children: [
-            // Main PageView (4 pages) or single child
             isSinglePage
                 ? widget.child!
                 : PageView(
               controller: _pageController,
               onPageChanged: _onPageChanged,
-              physics: const NeverScrollableScrollPhysics(), // DISABLED SWIPE
+              physics: const NeverScrollableScrollPhysics(),
               children: _pages,
             ),
 
-            // Light red overlay while recording
+            // Red overlay while recording
             ValueListenableBuilder<bool>(
               valueListenable: _isRecordingNotifier,
               builder: (context, isRecording, child) {
@@ -153,7 +151,7 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
               },
             ),
 
-            // Event card popup after recording
+            // Event card popup with LIVE TEXT
             ValueListenableBuilder<bool>(
               valueListenable: _showEventCardNotifier,
               builder: (context, showEventCard, child) {
@@ -180,6 +178,7 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Close button
                   Align(
                     alignment: Alignment.topRight,
                     child: GestureDetector(
@@ -195,12 +194,18 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
                       ),
                     ),
                   ),
-                  const SpeackEventCard(
-                    eventTitle: "Recorded Event",
-                    note:
-                    "Your recording has been processed successfully.",
-                    initialReminder: "At time of event",
-                    initialCallMe: false,
+
+                  // LIVE TEXT FROM SPEECH PROVIDER
+                  Consumer<SpeechProvider>(
+                    builder: (context, speech, child) {
+                      final text = speech.text.trim();
+                      return SpeackEventCard(
+                        eventTitle: "Voice Summary",
+                        note: text.isEmpty ? "No speech detected" : text,
+                        initialReminder: "At time of event",
+                        initialCallMe: false,
+                      );
+                    },
                   ),
                 ],
               ),
@@ -210,7 +215,6 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
       ),
     );
   }
-
 
   Widget _buildBottomNav() {
     return Container(
@@ -249,7 +253,6 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
       String label, {
         bool isMic = false,
       }) {
-    // ---------- Mic button ----------
     if (isMic) {
       return ValueListenableBuilder<bool>(
         valueListenable: _isRecordingNotifier,
@@ -284,8 +287,6 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
       );
     }
 
-    // ---------- Regular tabs ----------
-    // Map displayed tab index (0,1,3,4) → real page index (0-3)
     final int realPageIndex = index < 2 ? index : index - 1;
     final bool isSelected = _currentIndex == realPageIndex;
 
@@ -323,7 +324,6 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
     );
   }
 }
-
 
 
 

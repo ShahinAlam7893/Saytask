@@ -81,7 +81,7 @@ CustomTransitionPage buildPageWithSlideTransition({
 
 /// 🧭 Centralized GoRouter configuration with smooth transitions
 final GoRouter router = GoRouter(
-  initialLocation: '/splash',
+  initialLocation: '/home',
   routes: [
     // --- Onboarding & Auth routes (NO NAVBAR) ---
     GoRoute(

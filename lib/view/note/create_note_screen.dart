@@ -2,20 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:saytask/repository/voice_record_provider_note.dart';
+import 'package:saytask/repository/speech_provider.dart';     // Speech
+import 'package:saytask/repository/voice_record_provider_note.dart'; // Summary only
 import 'package:saytask/res/color.dart';
 import 'package:saytask/model/note_model.dart';
 import 'package:saytask/repository/notes_service.dart';
 import 'package:go_router/go_router.dart';
-import 'package:saytask/res/components/nab_bar.dart';
 
 class CreateNoteScreen extends StatelessWidget {
   const CreateNoteScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final recordProvider = context.watch<VoiceRecordProvider>();
+    final recordProvider = context.watch<VoiceRecordProvider>(); // Summary
     final notesProvider = context.read<NotesProvider>();
+    final speechProvider = context.watch<SpeechProvider>();     // Live text
 
     return Scaffold(
       backgroundColor: AppColors.white,
@@ -40,26 +41,32 @@ class CreateNoteScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Microphone Button
+            // Mic Button
             GestureDetector(
-              onTap: () {
-                if (!recordProvider.isRecording) {
-                  recordProvider.startRecording();
+              onTap: () async {
+                if (speechProvider.isListening) {
+                  await speechProvider.stopListening();
+                  // No need to copy — speechProvider.text is live
+                } else {
+                  final started = await speechProvider.startListening();
+                  if (!started) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please allow microphone access')),
+                    );
+                  }
                 }
               },
               child: Container(
                 width: 100.w,
                 height: 100.w,
                 decoration: BoxDecoration(
-                  color: recordProvider.isRecording
+                  color: speechProvider.isListening
                       ? Colors.redAccent
                       : const Color(0xFF22C55E),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  recordProvider.isRecording
-                  ? Icons.stop
-                  : Icons.mic,
+                  speechProvider.isListening ? Icons.stop : Icons.mic,
                   size: 48.sp,
                   color: Colors.white,
                 ),
@@ -67,7 +74,7 @@ class CreateNoteScreen extends StatelessWidget {
             ),
             SizedBox(height: 12.h),
             Text(
-              recordProvider.isRecording
+              speechProvider.isListening
                   ? "Recording..."
                   : "Click to start recording",
               style: GoogleFonts.inter(
@@ -78,7 +85,7 @@ class CreateNoteScreen extends StatelessWidget {
             ),
             SizedBox(height: 28.h),
 
-            // Note Section
+            // Note Section – LIVE FROM SPEECH PROVIDER
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -100,8 +107,8 @@ class CreateNoteScreen extends StatelessWidget {
                 border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
               child: Text(
-                recordProvider.noteContent.isNotEmpty
-                    ? recordProvider.noteContent
+                speechProvider.text.isNotEmpty
+                    ? speechProvider.text
                     : "Your recorded note text will appear here...",
                 style: GoogleFonts.inter(
                   fontSize: 14.sp,
@@ -112,7 +119,7 @@ class CreateNoteScreen extends StatelessWidget {
             ),
             SizedBox(height: 24.h),
 
-            // Structured Summary Section
+            // Summary Section – FROM VOICE RECORD PROVIDER
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -163,19 +170,20 @@ class CreateNoteScreen extends StatelessWidget {
             ),
             SizedBox(height: 30.h),
 
-            // Save Note Button
-            if (recordProvider.noteContent.isNotEmpty)
+            // Save Button – USE SPEECH TEXT
+            if (speechProvider.text.isNotEmpty)
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
                     final newNote = Note(
                       title: "New Note",
-                      content: recordProvider.noteContent,
+                      content: speechProvider.text,
                       createdAt: DateTime.now(),
                     );
                     notesProvider.addNote(newNote);
-                    recordProvider.resetRecording();
+                    speechProvider.clear();
+                    recordProvider.resetRecording(); // Clear summary
                     context.pop();
                   },
                   style: ElevatedButton.styleFrom(

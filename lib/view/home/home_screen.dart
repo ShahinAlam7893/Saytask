@@ -5,10 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:provider/provider.dart';
-import 'package:speech_to_text/speech_to_text.dart';
+import 'package:provider/provider.dart'; // NEW
 import 'package:saytask/repository/settings_service.dart';
+import 'package:saytask/repository/speech_provider.dart';
 import 'package:saytask/res/color.dart';
 import 'package:saytask/res/components/speak_screen/event_card.dart';
 
@@ -21,13 +20,12 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
-  // UI
+  // UI (unchanged)
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
   bool isRecording = false;
-  String? _selectedFileName;
-  String _transcribedText = "";
+  String? _selectedFileName = "";
 
   late final AnimationController _animationController;
   late final Animation<double> _scaleAnimation;
@@ -35,10 +33,6 @@ class _HomeScreenState extends State<HomeScreen>
   Timer? _typingTimer;
   String? _displayedHint = "";
   int _hintIndex = 0;
-
-  // Speech only
-  late final SpeechToText _speechToText;
-  bool _speechReady = false;
 
   final List<String> _preRecordingHints = [
     "Meeting today at 10 AM with Zen...",
@@ -60,18 +54,7 @@ class _HomeScreenState extends State<HomeScreen>
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
 
-    _speechToText = SpeechToText();
-    _initSpeech();
-
     _startHintTypingAnimation();
-  }
-
-  Future<void> _initSpeech() async {
-    _speechReady = await _speechToText.initialize(
-      onError: (error) => debugPrint('STT error: $error'),
-      onStatus: (status) => debugPrint('STT status: $status'),
-    );
-    if (mounted) setState(() {});
   }
 
   void _startHintTypingAnimation() {
@@ -104,7 +87,6 @@ class _HomeScreenState extends State<HomeScreen>
     _animationController.dispose();
     _typingTimer?.cancel();
     _scrollController.dispose();
-    _speechToText.cancel();
     super.dispose();
   }
 
@@ -128,83 +110,33 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   // ──────────────────────────────────────────────────────────────
-  // START SPEECH‑TO‑TEXT ONLY
+  // MIC TAP → USE PROVIDER
   // ──────────────────────────────────────────────────────────────
-  Future<void> _startRecording() async {
-    // 1. Request mic permission (Android)
-    final micStatus = await Permission.microphone.request();
-    if (!micStatus.isGranted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please allow microphone access')),
-      );
-      return;
+  Future<void> _onMicTap() async {
+    final speech = context.read<SpeechProvider>();
+
+    if (isRecording) {
+      await speech.stopListening();
+      _showRecordingCompleteDialog(context);
+    } else {
+      final started = await speech.startListening();
+      if (!started) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cannot start speech recognition')),
+        );
+      }
     }
 
-    if (!_speechReady) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Speech recognition not ready')),
-      );
-      return;
-    }
-
-    // 2. Pick best locale
-    final locales = await _speechToText.locales();
-    final locale = locales.firstWhere(
-          (l) => l.localeId.contains('en'),
-      orElse: () => locales.first,
-    );
-    debugPrint('Using locale: ${locale.localeId} - ${locale.name}');
-
-    // 3. Start listening
-    await _speechToText.listen(
-      onResult: (result) {
-        debugPrint('LIVE TRANSCRIPTION: ${result.recognizedWords}');
-        setState(() {
-          _transcribedText = result.recognizedWords;
-        });
-
-        // Auto‑scroll
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_scrollController.hasClients) {
-            _scrollController.animateTo(
-              _scrollController.position.maxScrollExtent,
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeOut,
-            );
-          }
-        });
-      },
-      localeId: locale.localeId,
-      listenFor: const Duration(seconds: 30),
-      pauseFor: const Duration(seconds: 5),
-      partialResults: true,
-      listenMode: ListenMode.confirmation,
-    );
-
-    setState(() {
-      isRecording = true;
-      _transcribedText = "";
-    });
+    setState(() => isRecording = !isRecording);
   }
 
   // ──────────────────────────────────────────────────────────────
-  // STOP SPEECH‑TO‑TEXT
-  // ──────────────────────────────────────────────────────────────
-  Future<void> _stopRecording() async {
-    await _speechToText.stop();
-    debugPrint('SPEECH STOPPED');
-    debugPrint('Final text: "$_transcribedText"');
-
-    setState(() => isRecording = false);
-    _showRecordingCompleteDialog(context);
-  }
-
-  // ──────────────────────────────────────────────────────────────
-  // UI (UNCHANGED)
+  // UI (100% unchanged – only reads from provider)
   // ──────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final settingsViewModel = context.watch<SettingsViewModel>();
+    final speech = context.watch<SpeechProvider>(); // ← LISTEN TO PROVIDER
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -289,7 +221,7 @@ class _HomeScreenState extends State<HomeScreen>
                   ScaleTransition(
                     scale: _scaleAnimation,
                     child: GestureDetector(
-                      onTap: isRecording ? _stopRecording : _startRecording,
+                      onTap: _onMicTap,
                       child: Container(
                         width: 160.w,
                         height: 160.w,
@@ -347,7 +279,7 @@ class _HomeScreenState extends State<HomeScreen>
                           children: [
                             Center(
                               child: Text(
-                                _transcribedText.isEmpty ? "Listening..." : _transcribedText,
+                                speech.text.isEmpty ? "Listening..." : speech.text,
                                 style: TextStyle(
                                   fontSize: 16.sp,
                                   color: AppColors.black,
@@ -400,9 +332,11 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   // ──────────────────────────────────────────────────────────────
-  // DIALOG (uses final text)
+  // DIALOG – uses provider text
   // ──────────────────────────────────────────────────────────────
   void _showRecordingCompleteDialog(BuildContext context) {
+    final speech = context.read<SpeechProvider>();
+
     showDialog(
       context: context,
       barrierDismissible: true,
@@ -428,9 +362,9 @@ class _HomeScreenState extends State<HomeScreen>
                 SizedBox(height: 8.h),
                 SpeackEventCard(
                   eventTitle: "Voice Summary",
-                  note: _transcribedText.trim().isEmpty
+                  note: speech.text.trim().isEmpty
                       ? "No speech detected"
-                      : _transcribedText.trim(),
+                      : speech.text.trim(),
                 ),
               ],
             ),

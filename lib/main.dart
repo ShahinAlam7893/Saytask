@@ -8,6 +8,7 @@ import 'package:saytask/repository/calendar_service.dart';
 import 'package:saytask/repository/chat_service.dart';
 import 'package:saytask/repository/settings_service.dart';
 import 'package:saytask/repository/speak_overlay_provider.dart';
+import 'package:saytask/repository/speech_provider.dart';
 import 'package:saytask/repository/today_task_service.dart';
 import 'package:saytask/repository/voice_record_provider_note.dart';
 import 'repository/notes_service.dart';
@@ -30,6 +31,7 @@ Future<void> main() async {
           ChangeNotifierProvider(create: (_) => ChatViewModel()),
           ChangeNotifierProvider(create: (_) => SettingsViewModel()),
           ChangeNotifierProvider(create: (_) => SpeakOverlayProvider()),
+          ChangeNotifierProvider(create: (_)=> SpeechProvider()),
         ],
         child: const MyApp(),
       ),

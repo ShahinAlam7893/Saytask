@@ -1,14 +1,16 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 import 'package:saytask/repository/settings_service.dart';
 import 'package:saytask/res/color.dart';
 import 'package:saytask/res/components/speak_screen/event_card.dart';
-import '../../res/components/recording_completing_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,21 +21,58 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
+  // UI
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final ScrollController _hintScrollController = ScrollController();
 
   bool isRecording = false;
   String? _selectedFileName;
   String _transcribedText = "";
 
-  late AnimationController _animationController;
-  late Animation<double> _scaleAnimation;
+  late final AnimationController _animationController;
+  late final Animation<double> _scaleAnimation;
 
-  Timer? _mockSpeechTimer;
-  Timer? _hintScrollTimer;
-  String? _displayedHint = "";
   Timer? _typingTimer;
+  String? _displayedHint = "";
+  int _hintIndex = 0;
+
+  // Speech only
+  late final SpeechToText _speechToText;
+  bool _speechReady = false;
+
+  final List<String> _preRecordingHints = [
+    "Meeting today at 10 AM with Zen...",
+    "Set a medication reminder for 8 PM...",
+    "Plan weekend trip to the mountains...",
+    "Buy groceries on the way home...",
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+
+    _scaleAnimation = Tween<double>(begin: 0.97, end: 1.03).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+
+    _speechToText = SpeechToText();
+    _initSpeech();
+
+    _startHintTypingAnimation();
+  }
+
+  Future<void> _initSpeech() async {
+    _speechReady = await _speechToText.initialize(
+      onError: (error) => debugPrint('STT error: $error'),
+      onStatus: (status) => debugPrint('STT status: $status'),
+    );
+    if (mounted) setState(() {});
+  }
 
   void _startHintTypingAnimation() {
     _typingTimer?.cancel();
@@ -49,7 +88,6 @@ class _HomeScreenState extends State<HomeScreen>
         charIndex++;
       } else {
         timer.cancel();
-
         Future.delayed(const Duration(seconds: 2), () {
           setState(() {
             _hintIndex = (_hintIndex + 1) % _preRecordingHints.length;
@@ -60,63 +98,13 @@ class _HomeScreenState extends State<HomeScreen>
     });
   }
 
-  final List<String> _preRecordingHints = [
-    "Meeting today at 10 AM with Zen...",
-    "Set a medication reminder for 8 PM...",
-    "Plan weekend trip to the mountains...",
-    "Buy groceries on the way home...",
-  ];
-
-  int _hintIndex = 0;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-
-    _scaleAnimation = Tween<double>(begin: 0.97, end: 1.03).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
-
-    _startHintTypingAnimation();
-    // _startHintAutoScroll();
-  }
-
-  // void _startHintAutoScroll() {
-  //   _hintScrollTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
-  //     if (_hintScrollController.hasClients) {
-  //       _hintScrollController
-  //           .animateTo(
-  //             _hintScrollController.position.maxScrollExtent,
-  //             duration: const Duration(seconds: 3),
-  //             curve: Curves.easeInOut,
-  //           )
-  //           .then((_) {
-  //             // Loop the scroll
-  //             _hintScrollController.jumpTo(0);
-  //           });
-  //     }
-  //
-  //     // change text index for effect
-  //     setState(() {
-  //       _hintIndex = (_hintIndex + 1) % _preRecordingHints.length;
-  //     });
-  //   });
-  // }
-
   @override
   void dispose() {
     _searchController.dispose();
     _animationController.dispose();
-    _mockSpeechTimer?.cancel();
     _typingTimer?.cancel();
-    // _hintScrollTimer?.cancel();
     _scrollController.dispose();
-    _hintScrollController.dispose();
+    _speechToText.cancel();
     super.dispose();
   }
 
@@ -134,60 +122,86 @@ class _HomeScreenState extends State<HomeScreen>
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No file selected'),
-          backgroundColor: Colors.red,
-        ),
+        const SnackBar(content: Text('No file selected'), backgroundColor: Colors.red),
       );
     }
   }
 
-  void _startRecording() {
-    setState(() {
-      isRecording = true;
-      _transcribedText = "";
-    });
+  // ──────────────────────────────────────────────────────────────
+  // START SPEECH‑TO‑TEXT ONLY
+  // ──────────────────────────────────────────────────────────────
+  Future<void> _startRecording() async {
+    // 1. Request mic permission (Android)
+    final micStatus = await Permission.microphone.request();
+    if (!micStatus.isGranted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please allow microphone access')),
+      );
+      return;
+    }
 
-    // 🔹 Simulate speech recognition
-    const fakeSpeechChunks = [
-      "Hello there...",
-      "I'm testing the SayTask voice feature...",
-      "This should show live transcription.",
-      "Recording almost done...",
-    ];
+    if (!_speechReady) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Speech recognition not ready')),
+      );
+      return;
+    }
 
-    int index = 0;
-    _mockSpeechTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
-      if (index < fakeSpeechChunks.length) {
+    // 2. Pick best locale
+    final locales = await _speechToText.locales();
+    final locale = locales.firstWhere(
+          (l) => l.localeId.contains('en'),
+      orElse: () => locales.first,
+    );
+    debugPrint('Using locale: ${locale.localeId} - ${locale.name}');
+
+    // 3. Start listening
+    await _speechToText.listen(
+      onResult: (result) {
+        debugPrint('LIVE TRANSCRIPTION: ${result.recognizedWords}');
         setState(() {
-          _transcribedText += " ${fakeSpeechChunks[index]}";
+          _transcribedText = result.recognizedWords;
         });
 
+        // Auto‑scroll
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_scrollController.hasClients) {
             _scrollController.animateTo(
               _scrollController.position.maxScrollExtent,
-              duration: const Duration(milliseconds: 300),
+              duration: const Duration(milliseconds: 250),
               curve: Curves.easeOut,
             );
           }
         });
+      },
+      localeId: locale.localeId,
+      listenFor: const Duration(seconds: 30),
+      pauseFor: const Duration(seconds: 5),
+      partialResults: true,
+      listenMode: ListenMode.confirmation,
+    );
 
-        index++;
-      } else {
-        timer.cancel();
-      }
+    setState(() {
+      isRecording = true;
+      _transcribedText = "";
     });
   }
 
-  void _stopRecording() {
-    _mockSpeechTimer?.cancel();
-    setState(() {
-      isRecording = false;
-    });
+  // ──────────────────────────────────────────────────────────────
+  // STOP SPEECH‑TO‑TEXT
+  // ──────────────────────────────────────────────────────────────
+  Future<void> _stopRecording() async {
+    await _speechToText.stop();
+    debugPrint('SPEECH STOPPED');
+    debugPrint('Final text: "$_transcribedText"');
+
+    setState(() => isRecording = false);
     _showRecordingCompleteDialog(context);
   }
 
+  // ──────────────────────────────────────────────────────────────
+  // UI (UNCHANGED)
+  // ──────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final settingsViewModel = context.watch<SettingsViewModel>();
@@ -208,11 +222,7 @@ class _HomeScreenState extends State<HomeScreen>
               width: 100.w,
             ),
             IconButton(
-              icon: Icon(
-                Icons.settings_outlined,
-                color: Colors.black,
-                size: 24.sp,
-              ),
+              icon: Icon(Icons.settings_outlined, color: Colors.black, size: 24.sp),
               onPressed: () => context.push('/settings'),
             ),
           ],
@@ -221,14 +231,9 @@ class _HomeScreenState extends State<HomeScreen>
 
       body: Column(
         children: [
-          // 🔹 Search Bar
+          // Search Bar
           Padding(
-            padding: EdgeInsets.only(
-              top: 50.h,
-              left: 16.w,
-              right: 16.w,
-              bottom: 12.h,
-            ),
+            padding: EdgeInsets.only(top: 50.h, left: 16.w, right: 16.w, bottom: 12.h),
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12.r),
@@ -254,43 +259,27 @@ class _HomeScreenState extends State<HomeScreen>
                   fillColor: Colors.grey[50],
                   suffixIcon: IconButton(
                     onPressed: _pickFile,
-                    icon: Icon(
-                      Icons.attach_file,
-                      color: Colors.grey[600],
-                      size: 20.sp,
-                    ),
+                    icon: Icon(Icons.attach_file, color: Colors.grey[600], size: 20.sp),
                   ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(18.r),
-                    borderSide: BorderSide(
-                      color: AppColors.green!,
-                      width: 0.8.w,
-                    ),
+                    borderSide: BorderSide(color: AppColors.green!, width: 0.8.w),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(18.r),
-                    borderSide: BorderSide(
-                      color: AppColors.green!,
-                      width: 0.8.w,
-                    ),
+                    borderSide: BorderSide(color: AppColors.green!, width: 0.8.w),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(18.r),
-                    borderSide: BorderSide(
-                      color: AppColors.green!,
-                      width: 0.8.w,
-                    ),
+                    borderSide: BorderSide(color: AppColors.green!, width: 0.8.w),
                   ),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 20.w,
-                    vertical: 14.h,
-                  ),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 14.h),
                 ),
               ),
             ),
           ),
 
-          // 🔹 Mic Section
+          // Mic Section
           Expanded(
             child: Center(
               child: Column(
@@ -309,9 +298,8 @@ class _HomeScreenState extends State<HomeScreen>
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color:
-                                  (isRecording ? Colors.red : AppColors.green)
-                                      .withOpacity(0.4),
+                              color: (isRecording ? Colors.red : AppColors.green)
+                                  .withOpacity(0.4),
                               blurRadius: 25.r,
                               spreadRadius: 5.r,
                               offset: Offset(0, 4.h),
@@ -329,11 +317,7 @@ class _HomeScreenState extends State<HomeScreen>
                   SizedBox(height: 24.h),
                   RichText(
                     text: TextSpan(
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 16.sp,
-                        color: Colors.black,
-                      ),
+                      style: TextStyle(fontFamily: 'Inter', fontSize: 16.sp, color: Colors.black),
                       children: [
                         const TextSpan(text: 'Tap to '),
                         WidgetSpan(
@@ -348,57 +332,48 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
 
-                  // 🔹 Text area (Hint or Transcribed Text)
+                  // Live Text / Hint
                   SizedBox(
                     height: 60.h,
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 300),
                       child: isRecording
                           ? Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 20.w),
-                              child: SizedBox(
-                                height: 60.h,
-                                child: ListView(
-                                  controller: _scrollController,
-                                  scrollDirection: Axis.horizontal,
-                                  physics: const BouncingScrollPhysics(),
-                                  children: [
-                                    Center(
-                                      child: Text(
-                                        _transcribedText.isEmpty
-                                            ? "Listening..."
-                                            : _transcribedText,
-                                        style: TextStyle(
-                                          fontSize: 16.sp,
-                                          color: AppColors.black,
-                                          fontFamily: 'Inter',
-                                          fontWeight: FontWeight.w400,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                        overflow: TextOverflow.fade,
-                                      ),
-                                    ),
-                                  ],
+                        padding: EdgeInsets.symmetric(horizontal: 20.w),
+                        child: ListView(
+                          controller: _scrollController,
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          children: [
+                            Center(
+                              child: Text(
+                                _transcribedText.isEmpty ? "Listening..." : _transcribedText,
+                                style: TextStyle(
+                                  fontSize: 16.sp,
+                                  color: AppColors.black,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w400,
                                 ),
-                              ),
-                            )
-                          : SizedBox(
-                              height: 40.h,
-                              child: Center(
-                                child: Text(
-                                  _displayedHint ?? "",
-                                  key: ValueKey(_displayedHint),
-                                  style: TextStyle(
-                                    fontSize: 16.sp,
-                                    color: AppColors.green,
-                                    fontStyle: FontStyle.italic,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
+                                textAlign: TextAlign.center,
                               ),
                             ),
+                          ],
+                        ),
+                      )
+                          : Center(
+                        child: Text(
+                          _displayedHint ?? "",
+                          key: ValueKey(_displayedHint),
+                          style: TextStyle(
+                            fontSize: 16.sp,
+                            color: AppColors.green,
+                            fontStyle: FontStyle.italic,
+                            fontFamily: 'Inter',
+                            fontWeight: FontWeight.w400,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -410,20 +385,23 @@ class _HomeScreenState extends State<HomeScreen>
 
       floatingActionButton: settingsViewModel.enableAIChatbot
           ? SizedBox(
-              width: 60.w,
-              height: 60.h,
-              child: FloatingActionButton(
-                onPressed: () => context.push('/chat'),
-                backgroundColor: AppColors.green,
-                shape: const CircleBorder(),
-                elevation: 4,
-                child: Icon(Icons.chat, color: Colors.white, size: 28.sp),
-              ),
-            )
+        width: 60.w,
+        height: 60.h,
+        child: FloatingActionButton(
+          onPressed: () => context.push('/chat'),
+          backgroundColor: AppColors.green,
+          shape: const CircleBorder(),
+          elevation: 4,
+          child: Icon(Icons.chat, color: Colors.white, size: 28.sp),
+        ),
+      )
           : null,
     );
   }
 
+  // ──────────────────────────────────────────────────────────────
+  // DIALOG (uses final text)
+  // ──────────────────────────────────────────────────────────────
   void _showRecordingCompleteDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -442,10 +420,7 @@ class _HomeScreenState extends State<HomeScreen>
                     onTap: () => Navigator.of(context).pop(),
                     child: Container(
                       padding: EdgeInsets.all(6.w),
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
+                      decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
                       child: Icon(Icons.close, color: Colors.black, size: 22.sp),
                     ),
                   ),
@@ -453,8 +428,9 @@ class _HomeScreenState extends State<HomeScreen>
                 SizedBox(height: 8.h),
                 SpeackEventCard(
                   eventTitle: "Voice Summary",
-                  note:
-                  "You said: ${_transcribedText.trim().isEmpty ? "No speech detected" : _transcribedText.trim()}",
+                  note: _transcribedText.trim().isEmpty
+                      ? "No speech detected"
+                      : _transcribedText.trim(),
                 ),
               ],
             ),

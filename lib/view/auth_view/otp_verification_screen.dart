@@ -1,16 +1,20 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'dart:async';
-import '../../res/color.dart';
-import '../../res/components/common_button.dart';
+import 'package:provider/provider.dart';
+import 'package:saytask/res/color.dart';
+import 'package:saytask/res/components/common_button.dart';
+import 'package:saytask/res/components/top_snackbar.dart';
+import 'package:saytask/view_model/auth_view_model.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
-  final String email;
+  // Now we properly receive the reset token from navigation
+  final String resetToken;
 
   const OtpVerificationScreen({
     super.key,
-    required this.email,
+    required this.resetToken,
   });
 
   @override
@@ -18,42 +22,39 @@ class OtpVerificationScreen extends StatefulWidget {
 }
 
 class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
-  final List<TextEditingController> _controllers = List.generate(
-    4,
-        (index) => TextEditingController(),
-  );
-  final List<FocusNode> _focusNodes = List.generate(
-    4,
-        (index) => FocusNode(),
-  );
+  final int otpLength = 6;
+  late final List<TextEditingController> _controllers;
+  late final List<FocusNode> _focusNodes;
 
-  int _secondsRemaining = 119; // 1:59
+  int _secondsRemaining = 119;
   Timer? _timer;
 
   @override
   void initState() {
     super.initState();
+    _controllers = List.generate(otpLength, (_) => TextEditingController());
+    _focusNodes = List.generate(otpLength, (_) => FocusNode());
+
+    // Set the token in ViewModel so resend/resendOtp can use it
+    final auth = Provider.of<AuthViewModel>(context, listen: false);
+    auth.resetEmailToken = widget.resetToken;
+
     _startTimer();
   }
 
   @override
   void dispose() {
     _timer?.cancel();
-    for (var controller in _controllers) {
-      controller.dispose();
-    }
-    for (var focusNode in _focusNodes) {
-      focusNode.dispose();
-    }
+    for (var c in _controllers) c.dispose();
+    for (var f in _focusNodes) f.dispose();
     super.dispose();
   }
 
   void _startTimer() {
+    _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_secondsRemaining > 0) {
-        setState(() {
-          _secondsRemaining--;
-        });
+        setState(() => _secondsRemaining--);
       } else {
         timer.cancel();
       }
@@ -61,40 +62,83 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   }
 
   String _formatTime(int seconds) {
-    int minutes = seconds ~/ 60;
-    int remainingSeconds = seconds % 60;
-    return '$minutes:${remainingSeconds.toString().padLeft(2, '0')}';
-  }
-
-  void _onOtpChanged(String value, int index) {
-    if (value.isNotEmpty && index < 3) {
-      _focusNodes[index + 1].requestFocus();
-    }
+    final minutes = seconds ~/ 60;
+    final secs = seconds % 60;
+    return '$minutes:${secs.toString().padLeft(2, '0')}';
   }
 
   void _clearOtpFields() {
-    for (var controller in _controllers) {
-      controller.clear();
-    }
+    for (var c in _controllers) c.clear();
     _focusNodes.first.requestFocus();
   }
 
-  void _verifyOtp() {
-    String otp = _controllers.map((controller) => controller.text).join();
-    if (otp.length == 4) {
+  bool get canResend => _secondsRemaining == 0;
+
+  Future<void> _verifyOtp() async {
+    FocusScope.of(context).unfocus();
+
+    final otp = _controllers.map((c) => c.text).join();
+
+    if (otp.length != otpLength) {
+      TopSnackBar.show(
+        context,
+        message: "Please enter a valid 6-digit OTP",
+        backgroundColor: Colors.red,
+      );
+      return;
+    }
+
+    final auth = Provider.of<AuthViewModel>(context, listen: false);
+
+    final success = await auth.verifyResetOtp(
+      otp,
+      widget.resetToken, // Pass the correct token!
+    );
+
+    if (!mounted) return;
+
+    if (success) {
+      TopSnackBar.show(
+        context,
+        message: "OTP Verified Successfully!",
+        backgroundColor: Colors.green,
+      );
       context.push('/create_new_password');
-      print('OTP: $otp');
+    } else {
+      TopSnackBar.show(
+        context,
+        message: "Invalid or expired OTP",
+        backgroundColor: Colors.red,
+      );
     }
   }
 
-  void _resendCode() {
-    setState(() {
-      _secondsRemaining = 119;
-    });
+  Future<void> _resendCode() async {
+    if (!canResend) return;
+
+    final auth = Provider.of<AuthViewModel>(context, listen: false);
 
     _clearOtpFields();
+    setState(() => _secondsRemaining = 119);
     _startTimer();
-    // Handle resend code logic
+
+    final success = await auth.resendOtp(widget.resetToken); // Pass token here too
+
+    if (!mounted) return;
+
+    if (success) {
+      TopSnackBar.show(
+        context,
+        message: "New OTP sent!",
+        backgroundColor: Colors.green,
+      );
+    } else {
+      TopSnackBar.show(
+        context,
+        message: "Failed to resend OTP",
+        backgroundColor: Colors.red,
+      );
+    }
   }
 
   @override
@@ -106,11 +150,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => context.pop(context),
+          onPressed: () => context.pop(),
         ),
       ),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 20.h),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -127,7 +171,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               ),
               SizedBox(height: 12.h),
               Text(
-                '4 digit code has been sent to your email ${widget.email}',
+                'A 6-digit code has been sent to your email',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: 'Inter',
@@ -138,23 +182,26 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                 ),
               ),
               SizedBox(height: 40.h),
-              // OTP Input Fields
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  4,
-                      (index) => Container(
-                    width: 60.w,
+
+              // OTP Fields
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 12.w,
+                runSpacing: 12.h,
+                children: List.generate(otpLength, (index) {
+                  return SizedBox(
+                    width: 50.w,
                     height: 60.h,
-                    margin: EdgeInsets.symmetric(horizontal: 8.w),
                     child: TextField(
                       controller: _controllers[index],
                       focusNode: _focusNodes[index],
                       textAlign: TextAlign.center,
                       keyboardType: TextInputType.number,
+                      textInputAction: index == otpLength - 1
+                          ? TextInputAction.done
+                          : TextInputAction.next,
                       maxLength: 1,
                       style: TextStyle(
-                        fontFamily: 'Inter',
                         fontSize: 24.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors.black,
@@ -173,71 +220,56 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8.r),
-                          borderSide: BorderSide(
-                            color: AppColors.green,
-                            width: 2,
-                          ),
+                          borderSide: BorderSide(color: AppColors.green, width: 2),
                         ),
                       ),
                       onChanged: (value) {
-                        if (value.isNotEmpty && index < 3) {
+                        if (value.isNotEmpty && index < otpLength - 1) {
                           _focusNodes[index + 1].requestFocus();
                         } else if (value.isEmpty && index > 0) {
                           _focusNodes[index - 1].requestFocus();
+                        } else if (index == otpLength - 1 && value.isNotEmpty) {
+                          _verifyOtp(); // Auto-submit on last digit
                         }
                       },
-                      onTap: () {
-                        _controllers[index].selection = TextSelection.fromPosition(
-                          TextPosition(offset: _controllers[index].text.length),
-                        );
-                      },
                     ),
-                  ),
-                ),
+                  );
+                }),
               ),
+
               SizedBox(height: 24.h),
-              // Timer
               Text(
-                'Code expire in : ${_formatTime(_secondsRemaining)}',
+                'Code expires in: ${_formatTime(_secondsRemaining)}',
                 style: TextStyle(
-                  fontFamily: 'Inter',
                   fontSize: 14.sp,
-                  fontWeight: FontWeight.w400,
                   color: Colors.grey[700],
                 ),
               ),
               SizedBox(height: 32.h),
-              // Verify Button
+
               CustomButton(
                 text: 'Verify',
                 onPressed: _verifyOtp,
                 height: 50.h,
-
               ),
+
               SizedBox(height: 20.h),
-              // Resend Code
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Didn\'t receive code? ',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.grey[700],
-                    ),
+                    "Didn't receive code? ",
+                    style: TextStyle(fontSize: 14.sp, color: Colors.grey[700]),
                   ),
                   GestureDetector(
-                    onTap: _resendCode,
+                    onTap: canResend ? _resendCode : null,
                     child: Text(
                       'Resend',
                       style: TextStyle(
-                        fontFamily: 'Inter',
                         fontSize: 14.sp,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black,
-                        decoration: TextDecoration.underline,
+                        color: canResend ? AppColors.green : Colors.grey,
+                        decoration: canResend ? TextDecoration.underline : null,
                       ),
                     ),
                   ),

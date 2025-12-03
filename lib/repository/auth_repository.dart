@@ -1,0 +1,167 @@
+// lib/repository/auth_repository.dart
+
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:saytask/core/api_endpoints.dart';
+import 'package:saytask/service/local_storage_service.dart';
+import 'package:saytask/core/jwt_helper.dart';
+import 'package:saytask/model/user_model.dart';
+
+class AuthRepository {
+  final String baseUrl = Urls.baseUrl;
+
+  Future<UserModel> register({
+    required String fullName,
+    required String email,
+    required String password,
+  }) async {
+    final url = Uri.parse('$baseUrl/auth/register/');
+    final body = jsonEncode({
+      'full_name': fullName,
+      'email': email,
+      'password': password,
+    });
+
+    final res = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: body,
+    );
+
+    if (res.statusCode == 200 || res.statusCode == 201) {
+      final data = jsonDecode(res.body);
+
+      if (data.containsKey('access')) {
+        final token = data['access'];
+        await LocalStorageService.saveToken(token);
+        return UserModel.fromJwt(JwtHelper.decode(token));
+      }
+
+      return UserModel(
+        userId: data['id']?.toString() ?? "",
+        fullName: data['full_name'] ?? fullName,
+        email: data['email'] ?? email,
+      );
+    }
+
+    throw _handleError(res, "Registration failed");
+  }
+
+  Future<UserModel> login(String email, String password) async {
+    final url = Uri.parse('$baseUrl/auth/token/');
+    final body = jsonEncode({'email': email, 'password': password});
+
+    final res = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: body,
+    );
+
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+
+      if (data.containsKey('access')) {
+        final token = data['access'];
+        await LocalStorageService.saveToken(token);
+        return UserModel.fromJwt(JwtHelper.decode(token));
+      }
+
+      throw Exception("Login successful but access token missing");
+    }
+
+    throw _handleError(res, "Login failed");
+  }
+
+  Future<void> logout() async {
+    await LocalStorageService.clear();
+  }
+
+
+  Future<Map<String, dynamic>> forgotPassword(String email) async {
+    final url = Uri.parse('$baseUrl/auth/forgot-password/');
+    final body = jsonEncode({'email': email});
+
+    final res = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: body,
+    );
+
+    if (res.statusCode == 200) {
+      return jsonDecode(res.body);
+    }
+
+    throw _handleError(res, "Failed to send OTP");
+  }
+
+ 
+  Future<Map<String, dynamic>> verifyResetOtp({
+    required String token,
+    required String otp,
+  }) async {
+    final url = Uri.parse('$baseUrl/auth/verify-reset-otp/');
+    final body = jsonEncode({'token': token, 'otp': otp});
+
+    final res = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: body,
+    );
+
+    if (res.statusCode == 200) {
+      return jsonDecode(res.body);
+    }
+
+    throw _handleError(res, "OTP verification failed");
+  }
+
+
+  Future<bool> setNewPassword({
+    required String token,
+    required String newPassword,
+  }) async {
+    final url = Uri.parse('$baseUrl/auth/set-new-password/');
+    final body = jsonEncode({'token': token, 'new_password': newPassword});
+
+    final res = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: body,
+    );
+
+    if (res.statusCode == 200) return true;
+
+    throw _handleError(res, "Reset password failed");
+  }
+
+
+  Future<Map<String, dynamic>> resendOtp(String token) async {
+    final url = Uri.parse('$baseUrl/auth/resend-otp/');
+    final body = jsonEncode({'token': token});
+
+    final res = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: body,
+    );
+
+    if (res.statusCode == 200) return jsonDecode(res.body);
+
+    throw _handleError(res, "Resend OTP failed");
+  }
+
+
+  Exception _handleError(http.Response res, String defaultMsg) {
+    try {
+      final json = jsonDecode(res.body);
+      if (json is Map && json.containsKey("detail")) {
+        return Exception(json["detail"]);
+      }
+      if (json is Map && json.containsKey("message")) {
+        return Exception(json["message"]);
+      }
+    } catch (_) {}
+
+    return Exception("$defaultMsg (Code: ${res.statusCode})");
+  }
+}

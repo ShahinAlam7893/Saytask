@@ -1,62 +1,107 @@
 import 'package:flutter/material.dart';
 import 'package:saytask/model/chat_model.dart';
+import 'package:saytask/repository/chat_repository.dart'; 
 
 class ChatViewModel extends ChangeNotifier {
   final List<ChatMessage> _messages = [];
+  final ChatRepository _repository; 
+  bool isLoading = false;
 
   List<ChatMessage> get messages => _messages;
 
-  /// Send a message and trigger auto-reply
-  void sendMessage(String message) {
-    // Add user message
-    _messages.add(ChatMessage(message: message, type: MessageType.user));
+  ChatViewModel() : _repository = ChatRepository();
+
+  Future<void> fetchHistory() async {
+    isLoading = true;
     notifyListeners();
 
-    // Auto reply after 1 second
-    Future.delayed(const Duration(seconds: 1), () {
-      if (message.toLowerCase().contains("dog food")) {
-        // Bot message
-        _messages.add(ChatMessage(
-          message: "I'll make sure you have a reminder set for buying dog food tomorrow afternoon!",
-          type: MessageType.bot,
-        ));
-
-        // Add event card for tomorrow 3 PM
-        final now = DateTime.now();
-        final tomorrow3PM = DateTime(now.year, now.month, now.day + 1, 15, 0);
-        _messages.add(ChatMessage(
-          message: "",
-          type: MessageType.event,
-          eventTitle: "Buy dog food",
-          eventTime: tomorrow3PM,
-          callMe: true,
-          notification: "At time of event",
-          note: "Remember to buy dog food tomorrow",
-        ));
-      } else {
-        _messages.add(ChatMessage(
-          message: "Thank you for your message.",
-          type: MessageType.bot,
-        ));
+    try {
+      final data = await _repository.getChatHistory();
+      final List<dynamic> apiMessages = data['messages'];
+      _messages.clear();
+      for (var msg in apiMessages) {
+        _messages.add(ChatMessage.fromApi(msg));
       }
+    } catch (e) {
+      print('Error fetching history: $e');
+    } finally {
+      isLoading = false;
       notifyListeners();
-    });
+    }
   }
 
-  /// Delete a message
+  Future<void> sendMessage(String message) async {
+    _messages.add(ChatMessage(
+      message: message,
+      type: MessageType.user,
+      createdAt: DateTime.now(),
+      responseType: 'response',
+    ));
+    notifyListeners();
+
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      final response = await _repository.sendMessage(message);
+
+      final aiMessage = response['message'] as String;
+      final responseType = response['response_type'] as String;
+      final date = response['date'] as String?;
+      final time = response['time'] as String?;
+      final messageId = response['message_id'] as String?;
+
+      DateTime? eventTime;
+      if (date != null && time != null) {
+        eventTime = DateTime.parse('$date $time'); 
+      } else if (date != null) {
+        eventTime = DateTime.parse(date);
+      }
+
+      MessageType type;
+      if (responseType == 'event') {
+        type = MessageType.event;
+      } else if (responseType == 'task') {
+        type = MessageType.task;
+      } else {
+        type = MessageType.bot;
+      }
+
+      _messages.add(ChatMessage(
+        message: aiMessage,
+        type: type,
+        createdAt: DateTime.now(),
+        responseType: responseType,
+        eventTime: eventTime,
+        eventTitle: aiMessage,
+        messageId: messageId,
+      ));
+    } catch (e) {
+   
+      print('Error sending message: $e');
+      _messages.add(ChatMessage(
+        message: 'Error: Could not get response',
+        type: MessageType.bot,
+      ));
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+
   void deleteMessage(ChatMessage msg) {
     _messages.remove(msg);
     notifyListeners();
   }
 
-  /// Edit an event message (title, time, notification, note)
   void editEventMessage(
-      ChatMessage msg, {
-        String? newTitle,
-        DateTime? newTime,
-        String? newNotification,
-        String? newNote,
-      }) {
+    ChatMessage msg, {
+    String? newTitle,
+    DateTime? newTime,
+    String? newNotification,
+    String? newNote,
+  }) {
     final index = _messages.indexOf(msg);
     if (index != -1) {
       final old = _messages[index];
@@ -71,5 +116,8 @@ class ChatViewModel extends ChangeNotifier {
       );
       notifyListeners();
     }
+  }
+  Future<Map<String, dynamic>> classifyMessage(String message) async {
+    return await _repository.classifyMessage(message);
   }
 }

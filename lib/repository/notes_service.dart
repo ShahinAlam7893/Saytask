@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:saytask/repository/chat_repository.dart';
 import '../model/note_model.dart';
 
 class NotesProvider with ChangeNotifier {
@@ -21,6 +22,7 @@ class NotesProvider with ChangeNotifier {
     ),
   ];
   String _searchQuery = '';
+  final ChatRepository _chatRepository = ChatRepository();
 
   List<Note> get notes => List.unmodifiable(_notes);
 

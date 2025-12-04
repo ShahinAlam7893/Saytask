@@ -6,7 +6,6 @@ class TaskProvider extends ChangeNotifier {
   List<Task> _tasks = [];
   List<Task> get tasks => _tasks;
 
-  // Temporary state for TaskDetailsScreen
   TextEditingController? _titleController;
   TextEditingController? _descriptionController;
   TextEditingController? _startTimeController;
@@ -78,7 +77,7 @@ class TaskProvider extends ChangeNotifier {
     final taskIndex = _tasks.indexWhere((t) => t.id == taskId);
     if (taskIndex != -1) {
       final task = _tasks[taskIndex];
-      final updatedReminders = List<String>.from(task.reminders ?? [])..remove(reminder);
+      final updatedReminders = List<String>.from(task.reminders)..remove(reminder);
       _tasks[taskIndex] = Task(
         id: task.id,
         title: task.title,
@@ -100,7 +99,7 @@ class TaskProvider extends ChangeNotifier {
     final taskIndex = _tasks.indexWhere((t) => t.id == taskId);
     if (taskIndex != -1) {
       final task = _tasks[taskIndex];
-      final updatedReminders = List<String>.from(task.reminders ?? [])..add(reminder);
+      final updatedReminders = List<String>.from(task.reminders)..add(reminder);
       _tasks[taskIndex] = Task(
         id: task.id,
         title: task.title,
@@ -128,7 +127,7 @@ class TaskProvider extends ChangeNotifier {
         startTime: task.startTime,
         duration: task.duration,
         tags: updatedTags,
-        reminders: task.reminders ?? [],
+        reminders: task.reminders,
         isCompleted: task.isCompleted,
       );
       notifyListeners();
@@ -160,7 +159,7 @@ class TaskProvider extends ChangeNotifier {
         startTime: newStartTime,
         duration: task.duration,
         tags: task.tags,
-        reminders: task.reminders ?? [],
+        reminders: task.reminders,
         isCompleted: task.isCompleted,
       );
       notifyListeners();
@@ -178,7 +177,7 @@ class TaskProvider extends ChangeNotifier {
         startTime: task.startTime,
         duration: task.duration,
         tags: task.tags,
-        reminders: task.reminders ?? [],
+        reminders: task.reminders,
         isCompleted: !task.isCompleted,
       );
       notifyListeners();

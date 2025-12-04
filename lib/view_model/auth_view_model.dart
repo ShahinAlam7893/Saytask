@@ -10,9 +10,8 @@ class AuthViewModel extends ChangeNotifier {
   UserModel? currentUser;
   String? _accessToken;
 
-  // 🔥 Forgot Password Tokens
-  String? resetEmailToken; // After sending email
-  String? verifiedResetToken; // After OTP verification
+  String? resetEmailToken; 
+  String? verifiedResetToken;
 
   bool isLoading = false;
 
@@ -85,9 +84,6 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
-  // ---------------------------
-  //  LOGIN
-  // ---------------------------
   Future<bool> login(String email, String password) async {
     isLoading = true;
     notifyListeners();
@@ -113,9 +109,6 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
-  // ---------------------------
-  //  LOGOUT
-  // ---------------------------
   Future<void> logout() async {
     await _repository.logout();
     await LocalStorageService.clear();
@@ -149,11 +142,6 @@ class AuthViewModel extends ChangeNotifier {
     return false;
   }
 
-  // ====================================================
-  // 🔥🔥🔥 FORGOT PASSWORD LOGIC
-  // ====================================================
-
-  /// 1️⃣ SEND OTP TO EMAIL
   Future<bool> forgotPassword(String email) async {
     isLoading = true;
     notifyListeners();
@@ -174,7 +162,6 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
-  /// 2️⃣ VERIFY OTP
   Future<bool> verifyResetOtp(String otp, String token) async {
     if (resetEmailToken == null) return false;
 
@@ -200,7 +187,6 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
-  /// 3️⃣ SET NEW PASSWORD
   Future<bool> setNewPassword(String newPassword) async {
     if (verifiedResetToken == null) return false;
 
@@ -223,7 +209,6 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
-  /// 4️⃣ RESEND OTP
   Future<bool> resendOtp(String email) async {
     if (resetEmailToken == null) return false;
 

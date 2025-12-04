@@ -20,11 +20,10 @@ import 'utils/routes/routes.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+final chatViewModel = ChatViewModel();
 
-  // Lock portrait mode
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
-  // Initialize SharedPreferences
   await LocalStorageService.init();
 
   runApp(
@@ -36,7 +35,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => NoteDetailsViewModel()),
         ChangeNotifierProvider(create: (_) => VoiceRecordProvider()),
         ChangeNotifierProvider(create: (_) => PlanViewModel()),
-        ChangeNotifierProvider(create: (_) => ChatViewModel()),
+        ChangeNotifierProvider.value(value: chatViewModel),
         ChangeNotifierProvider(create: (_) => SettingsViewModel()),
         ChangeNotifierProvider(create: (_) => SpeakOverlayProvider()),
         ChangeNotifierProvider(create: (_) => SpeechProvider()),

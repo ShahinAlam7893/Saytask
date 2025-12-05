@@ -24,8 +24,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool whatsappBot = true;
   bool enableAIChatbot = true;
   bool isSubscriptionExpanded = false;
-  int selectedPlan = 0; // 0 = Free, 1 = Premium, 2 = Unlimited
-
+  int selectedPlan = 0;
+  
   @override
   Widget build(BuildContext context) {
     final settingsViewModel = context.watch<SettingsViewModel>();

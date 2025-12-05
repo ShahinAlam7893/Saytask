@@ -1,21 +1,38 @@
-import 'package:flutter/material.dart';
+// model/plan_model.dart
 
-class PlanModel {
+class Plan {
+  final String id;
   final String name;
-  final String description;
-  final String price;
-  final String period;
-  final Color titleColor;   // For plan title color
-  final bool isPopular;     // For "Most Popular" badge
-  final bool isBestValue;   // For best value plan styling
+  final double monthlyPrice;
+  final double annualPrice;
 
-  PlanModel({
+  Plan({
+    required this.id,
     required this.name,
-    required this.description,
-    required this.price,
-    required this.period,
-    this.titleColor = Colors.black,
-    this.isPopular = false,
-    this.isBestValue = false,
+    required this.monthlyPrice,
+    required this.annualPrice,
   });
+
+  factory Plan.fromJson(Map<String, dynamic> json) {
+    return Plan(
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? 'Unknown',
+      monthlyPrice: _parsePrice(json['monthly_price']),
+      annualPrice: _parsePrice(json['annual_price']),
+    );
+  }
+
+  static double _parsePrice(dynamic price) {
+    if (price == null) return 0.0;
+    if (price is num) return price.toDouble();
+    if (price is String) {
+      return double.tryParse(price) ?? 0.0;
+    }
+    return 0.0;
+  }
+
+  @override
+  String toString() {
+    return 'Plan(id: $id, name: $name, monthly: $monthlyPrice, annual: $annualPrice)';
+  }
 }

@@ -4,8 +4,10 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:saytask/model/plan_model.dart';
 import 'package:saytask/res/color.dart';
 import 'package:saytask/repository/plan_service.dart';
+import 'package:saytask/view/onboarding/payment_screen.dart';
 
 class PlanScreen extends StatelessWidget {
   const PlanScreen({super.key});
@@ -13,7 +15,11 @@ class PlanScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => PlanViewModel(),
+      create: (_) {
+        final vm = PlanViewModel();
+        vm.loadPlans();
+        return vm;
+      },
       child: Scaffold(
         backgroundColor: AppColors.white,
         appBar: AppBar(
@@ -27,18 +33,11 @@ class PlanScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.black,
-                  width: 1.0,
-                ),
+                border: Border.all(color: Colors.black, width: 1.0),
               ),
               child: IconButton(
                 padding: EdgeInsets.zero,
-                icon: Icon(
-                  Icons.arrow_back,
-                  color: Colors.black,
-                  size: 16.sp,
-                ),
+                icon: Icon(Icons.arrow_back, color: Colors.black, size: 16.sp),
                 onPressed: () {
                   Navigator.pop(context);
                 },
@@ -57,6 +56,48 @@ class PlanScreen extends StatelessWidget {
         ),
         body: Consumer<PlanViewModel>(
           builder: (context, viewModel, _) {
+            if (viewModel.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (viewModel.errorMessage != null) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Error: ${viewModel.errorMessage}',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                    SizedBox(height: 16.h),
+                    ElevatedButton(
+                      onPressed: () => viewModel.loadPlans(),
+                      child: Text('Retry'),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+      
+            print("📋 Total plans loaded: ${viewModel.plans.length}");
+            for (var p in viewModel.plans) {
+              print("  - ID: ${p.id}, Name: ${p.name}, Monthly: \$${p.monthlyPrice.toStringAsFixed(2)}, Annual: \$${p.annualPrice.toStringAsFixed(2)}");
+            }
+            
+            final freePlan = viewModel.plans.firstWhere(
+              (p) => p.name.toLowerCase() == 'free',
+              orElse: () => viewModel.plans.first,
+            );
+            final basicPlan = viewModel.plans.firstWhere(
+              (p) => p.name.toLowerCase() == 'basic',
+              orElse: () => viewModel.plans.length > 1 ? viewModel.plans[1] : viewModel.plans.first,
+            );
+            final premiumPlan = viewModel.plans.firstWhere(
+              (p) => p.name.toLowerCase() == 'premium',
+              orElse: () => viewModel.plans.length > 2 ? viewModel.plans[2] : viewModel.plans.first,
+            );
+
             return SingleChildScrollView(
               padding: EdgeInsets.symmetric(horizontal: 16.w),
               child: Column(
@@ -72,7 +113,6 @@ class PlanScreen extends StatelessWidget {
                       color: AppColors.black,
                     ),
                   ),
-                  // SizedBox(height: 6.h),
                   Text(
                     "You can cancel anytime.",
                     style: TextStyle(
@@ -106,12 +146,12 @@ class PlanScreen extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(25.r),
                                 boxShadow: viewModel.isMonthly
                                     ? [
-                                  BoxShadow(
-                                    color: Colors.black12,
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
-                                  )
-                                ]
+                                        BoxShadow(
+                                          color: Colors.black12,
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ]
                                     : [],
                               ),
                               child: Text(
@@ -138,12 +178,12 @@ class PlanScreen extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(25.r),
                                 boxShadow: !viewModel.isMonthly
                                     ? [
-                                  BoxShadow(
-                                    color: Colors.black12,
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
-                                  )
-                                ]
+                                        BoxShadow(
+                                          color: Colors.black12,
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ]
                                     : [],
                               ),
                               child: RichText(
@@ -180,12 +220,13 @@ class PlanScreen extends StatelessWidget {
 
                   /// --- Plan Cards ---
                   _buildPlanCard(
+                    context: context,
+                    viewModel: viewModel,
+                    plan: freePlan,
                     title: "Free",
                     titleColor: Colors.black,
-                    price: "\$0.00",
-                    period: viewModel.isMonthly ? "/Monthly" : "/Monthly",
                     description:
-                    "14 events & reminders per week\n3 personal notes per week\nWhatsapp assistant\nUnlimited notifications\nScheduling conflict detection\nCreate events with text, video, or images\nNo credit card required",
+                        "14 events & reminders per week\n3 personal notes per week\nWhatsapp assistant\nUnlimited notifications\nScheduling conflict detection\nCreate events with text, video, or images\nNo credit card required",
                     buttonText: "Get Started",
                     isPopular: false,
                     isBestValue: false,
@@ -193,32 +234,32 @@ class PlanScreen extends StatelessWidget {
                     borderColor: Colors.grey.shade300,
                   ),
                   _buildPlanCard(
+                    context: context,
+                    viewModel: viewModel,
+                    plan: basicPlan,
                     title: "Premium",
                     titleColor: const Color(0xFF00A86B),
-                    price: viewModel.isMonthly ? "\$8.99" : "\$6.99",
-                    period: viewModel.isMonthly ? "/Monthly" : "/Monthly",
                     description:
-                    "56 events & reminders per week\n20 personal notes per week\nWhatsapp assistant\nUnlimited notifications\nScheduling conflict detection\nCreate events with text, video, or images\nCancel anytime",
+                        "56 events & reminders per week\n20 personal notes per week\nWhatsapp assistant\nUnlimited notifications\nScheduling conflict detection\nCreate events with text, video, or images\nCancel anytime",
                     buttonText: "Choose Plan",
                     isPopular: true,
                     color: const Color(0xFFEFFAF2),
                     borderColor: const Color(0xFF00A86B),
                   ),
                   _buildPlanCard(
+                    context: context,
+                    viewModel: viewModel,
+                    plan: premiumPlan,
                     title: "Unlimited",
                     titleColor: const Color(0xFFFF9800),
-                    price: viewModel.isMonthly ? "\$19.99" : "\$14.99",
-                    period: viewModel.isMonthly ? "/Monthly" : "/Monthly",
                     description:
-                    "Unlimited events & reminders\nUnlimited personal notes\nWhatsapp assistant\nUnlimited notifications\nScheduling conflict detection\nCreate events with text, video, or images\nCancel anytime",
+                        "Unlimited events & reminders\nUnlimited personal notes\nWhatsapp assistant\nUnlimited notifications\nScheduling conflict detection\nCreate events with text, video, or images\nCancel anytime",
                     buttonText: "Choose Plan",
                     isPopular: false,
                     isBestValue: true,
                     color: const Color(0xFFFFF9E6),
                     borderColor: const Color(0xFFFFC107),
                   ),
-
-
 
                   RichText(
                     textAlign: TextAlign.center,
@@ -236,7 +277,6 @@ class PlanScreen extends StatelessWidget {
                           ),
                           recognizer: TapGestureRecognizer()
                             ..onTap = () {
-                              // Navigate to Terms page
                               context.push('/terms_and_conditions');
                             },
                         ),
@@ -249,7 +289,6 @@ class PlanScreen extends StatelessWidget {
                           ),
                           recognizer: TapGestureRecognizer()
                             ..onTap = () {
-                              // Navigate to Privacy Policy page
                               context.push('/privacy_policy');
                             },
                         ),
@@ -267,9 +306,10 @@ class PlanScreen extends StatelessWidget {
   }
 
   Widget _buildPlanCard({
+    required BuildContext context,
+    required PlanViewModel viewModel,
+    required Plan plan,
     required String title,
-    required String price,
-    required String period,
     required String description,
     required String buttonText,
     required Color color,
@@ -278,6 +318,10 @@ class PlanScreen extends StatelessWidget {
     bool isPopular = false,
     bool isBestValue = false,
   }) {
+    final price = viewModel.getPrice(plan);
+    final priceText = "\$${price.toStringAsFixed(2)}";
+    final period = "/Monthly";
+
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -319,7 +363,7 @@ class PlanScreen extends StatelessWidget {
                         Row(
                           children: [
                             Text(
-                              price,
+                              priceText,
                               style: GoogleFonts.inter(
                                 fontSize: 24.sp,
                                 fontWeight: FontWeight.w700,
@@ -340,45 +384,102 @@ class PlanScreen extends StatelessWidget {
                   ],
                 ),
                 SizedBox(height: 10.h),
-                ...description.split('\n').map(
+                ...description
+                    .split('\n')
+                    .map(
                       (line) => Padding(
-                    padding: EdgeInsets.only(bottom: 4.h),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.check,
-                          color: titleColor,
-                          size: 14,
-                        ),
-                        SizedBox(width: 6.w),
-                        Expanded(
-                          child: Text(
-                            line,
-                            style: GoogleFonts.inter(
-                              fontSize: 14.sp,
-                              color: AppColors.black,
-                              fontWeight: FontWeight.w500,
-                              height: 1.4,
+                        padding: EdgeInsets.only(bottom: 4.h),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Icons.check, color: titleColor, size: 14),
+                            SizedBox(width: 6.w),
+                            Expanded(
+                              child: Text(
+                                line,
+                                style: GoogleFonts.inter(
+                                  fontSize: 14.sp,
+                                  color: AppColors.black,
+                                  fontWeight: FontWeight.w500,
+                                  height: 1.4,
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
 
                 SizedBox(height: 12.h),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () async {
+                      // Show loading indicator
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (ctx) => Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
+
+                      try {
+                        print("🔍 Selected Plan ID: ${plan.id}");
+                        print("🔍 Selected Plan Name: ${plan.name}");
+                        print("🔍 Billing Interval: ${viewModel.isMonthly ? 'month' : 'year'}");
+                        
+                        // Validate plan ID before checkout
+                        if (plan.id.isEmpty) {
+                          Navigator.of(context).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Invalid plan selected'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                          return;
+                        }
+
+                        // Get checkout URL
+                        final checkoutUrl = await viewModel.createCheckout(plan.id);
+
+                        // Close loading dialog
+                        Navigator.of(context).pop();
+
+                        if (checkoutUrl != null && checkoutUrl.isNotEmpty) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => CheckoutPage(
+                                checkoutUrl: checkoutUrl,
+                              ),
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Failed to create checkout session'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        Navigator.of(context).pop();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error: ${e.toString()}'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: isBestValue
                           ? const Color(0xFFFFC107)
                           : isPopular
-                          ? const Color(0xFF00A86B)
-                          : AppColors.white,
+                              ? const Color(0xFF00A86B)
+                              : AppColors.white,
                       padding: EdgeInsets.symmetric(vertical: 12.h),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14.r),
@@ -398,8 +499,6 @@ class PlanScreen extends StatelessWidget {
             ),
           ),
         ),
-
-        /// --- MOST POPULAR badge (top center) ---
         if (isPopular)
           Positioned(
             top: -14.h,
@@ -408,8 +507,7 @@ class PlanScreen extends StatelessWidget {
             child: Align(
               alignment: Alignment.center,
               child: Container(
-                padding:
-                EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
                 decoration: BoxDecoration(
                   color: const Color(0xFF00A86B),
                   borderRadius: BorderRadius.circular(20.r),

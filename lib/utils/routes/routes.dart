@@ -33,7 +33,6 @@ import '../../view/settings/settings_screen.dart';
 import '../../view/settings/terms_and_condition.dart';
 import '../../view/settings/update_password.dart';
 
-// Custom page transition for smooth navigation
 CustomTransitionPage buildPageWithFadeTransition({
   required BuildContext context,
   required GoRouterState state,
@@ -52,7 +51,7 @@ CustomTransitionPage buildPageWithFadeTransition({
   );
 }
 
-// Slide transition for detail pages
+
 CustomTransitionPage buildPageWithSlideTransition({
   required BuildContext context,
   required GoRouterState state,
@@ -74,11 +73,9 @@ CustomTransitionPage buildPageWithSlideTransition({
   );
 }
 
-/// 🧭 Centralized GoRouter configuration with smooth transitions
 final GoRouter router = GoRouter(
   initialLocation: '/splash',
   routes: [
-    // --- Onboarding & Auth routes (NO NAVBAR) ---
     GoRoute(
       path: '/splash',
       pageBuilder: (context, state) => buildPageWithFadeTransition(
@@ -182,7 +179,6 @@ final GoRouter router = GoRouter(
       ),
     ),
 
-    // --- Settings (NO NAVBAR) ---
     GoRoute(
       path: '/settings',
       pageBuilder: (context, state) => buildPageWithSlideTransition(
@@ -248,7 +244,7 @@ final GoRouter router = GoRouter(
       ),
     ),
 
-    // --- Chat (NO NAVBAR) ---
+
     GoRoute(
       path: '/chat',
       pageBuilder: (context, state) => buildPageWithSlideTransition(
@@ -258,7 +254,6 @@ final GoRouter router = GoRouter(
       ),
     ),
 
-    // --- Global Navbar Tabs (FADE TRANSITION) ---
     GoRoute(
       path: '/home',
       pageBuilder: (context, state) => buildPageWithFadeTransition(
@@ -300,7 +295,6 @@ final GoRouter router = GoRouter(
       ),
     ),
 
-    // --- Detail Pages (WITH NAVBAR, SLIDE TRANSITION) ---
     GoRoute(
       path: '/create_note',
       pageBuilder: (context, state) => buildPageWithSlideTransition(

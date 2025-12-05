@@ -164,4 +164,50 @@ class AuthRepository {
 
     return Exception("$defaultMsg (Code: ${res.statusCode})");
   }
+
+Future<void> updateProfile(UserModel updatedUser) async {
+  final url = Uri.parse('$baseUrl/auth/profile/');
+  final token = LocalStorageService.token;
+
+  if (token == null) throw Exception("No access token found");
+  Map<String, dynamic> body = {};
+
+  if (updatedUser.fullName.isNotEmpty) {
+    body["first_name"] = updatedUser.fullName;
+  }
+  if (updatedUser.gender != null && updatedUser.gender!.isNotEmpty) {
+    body["gender"] = updatedUser.gender;
+  }
+  if (updatedUser.dateOfBirth != null && updatedUser.dateOfBirth!.isNotEmpty) {
+    body["birth_date"] = updatedUser.dateOfBirth;
+  }
+  if (updatedUser.country != null && updatedUser.country!.isNotEmpty) {
+    body["country"] = updatedUser.country;
+  }
+  if (updatedUser.phoneNumber != null && updatedUser.phoneNumber!.isNotEmpty) {
+    body["phone_number"] = updatedUser.phoneNumber;
+  }
+
+  body["notifications_enabled"] = updatedUser.notificationsEnabled;
+
+  print("Sending profile update: $body");
+
+  final res = await http.patch(
+    url,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    },
+    body: jsonEncode(body),
+  );
+
+  print("Response: ${res.statusCode} ${res.body}"); 
+
+  if (res.statusCode == 200 || res.statusCode == 201) {
+    return;
+  }
+
+  throw _handleError(res, "Failed to update profile");
+}
+
 }

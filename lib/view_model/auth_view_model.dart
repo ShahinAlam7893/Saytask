@@ -15,18 +15,14 @@ class AuthViewModel extends ChangeNotifier {
 
   bool isLoading = false;
 
-  // ---------------------------
-  //  LOGIN STATUS
-  // ---------------------------
+  bool isUpdatingProfile = false;
+
   bool get isLoggedIn {
     final token = _accessToken ?? LocalStorageService.token;
     if (token == null) return false;
     return !_isTokenExpired(token);
   }
 
-  // ---------------------------
-  //  LOAD USER FROM STORED TOKEN
-  // ---------------------------
   Future<void> loadUserFromStoredToken() async {
     final token = LocalStorageService.token;
     if (token == null) {
@@ -46,9 +42,6 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
-  // ---------------------------
-  //  REGISTER
-  // ---------------------------
   Future<bool> register({
     required String fullName,
     required String email,
@@ -222,4 +215,26 @@ class AuthViewModel extends ChangeNotifier {
       return false;
     }
   }
+
+Future<bool> updateProfile(UserModel updatedUser) async {
+  isUpdatingProfile = true;
+  notifyListeners();
+
+  try {
+    await _repository.updateProfile(updatedUser);
+    currentUser = updatedUser;
+    notifyListeners();
+
+    return true;
+  } catch (e) {
+    if (kDebugMode) print('Update profile error: $e');
+    return false;
+  } finally {
+    isUpdatingProfile = false;
+    notifyListeners();
+  }
+}
+
+
+
 }

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart'; // NEW
+import 'package:provider/provider.dart';
 import 'package:saytask/repository/settings_service.dart';
 import 'package:saytask/repository/speech_provider.dart';
 import 'package:saytask/res/color.dart';

@@ -1,62 +1,87 @@
+// lib/repository/notes_service.dart  (replace entire file)
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:saytask/repository/chat_repository.dart';
-import '../model/note_model.dart';
+import 'package:saytask/model/note_model.dart';
+import 'package:saytask/repository/note_repository.dart';
+
 
 class NotesProvider with ChangeNotifier {
-  final List<Note> _notes = [
-    Note(
-      title: "Mobile App Design Ideas",
-      content: "Create a minimalist interface with voice-first interaction. Focus on accessibility and ease...",
-      createdAt: DateTime.now().subtract(const Duration(days: 2)),
-    ),
-    Note(
-      title: "Weekend Project",
-      content: "Build a small garden in the backyard. Research native plants and...",
-      createdAt: DateTime.now().subtract(const Duration(days: 1)),
-    ),
-    Note(
-      title: "Book Recommendations",
-      content: "Atomic Habits, The Design of Everyday Things, Deep Work - all great books for...",
-      createdAt: DateTime.now().subtract(const Duration(hours: 3)),
-    ),
-  ];
+  final NotesRepository _repo = NotesRepository();
+
+  List<Note> _notes = [];
+  bool _isLoading = false;
+  String? _error;
+
   String _searchQuery = '';
-  final ChatRepository _chatRepository = ChatRepository();
 
   List<Note> get notes => List.unmodifiable(_notes);
+  bool get isLoading => _isLoading;
+  String? get error => _error;
 
   List<Note> get filteredNotes {
     if (_searchQuery.isEmpty) return _notes;
+    final query = _searchQuery.toLowerCase();
     return _notes.where((note) =>
-    note.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        note.content.toLowerCase().contains(_searchQuery.toLowerCase())
-    ).toList();
+        note.title.toLowerCase().contains(query) ||
+        note.original.toLowerCase().contains(query)).toList();
   }
 
-  void addNote(Note note) {
-    _notes.insert(0, note);
+  Future<void> loadNotes() async {
+    _isLoading = true;
+    _error = null;
     notifyListeners();
+
+    try {
+      _notes = await _repo.fetchNotes();
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> addNote(String originalText) async {
+    try {
+      final note = await _repo.createNote(originalText);
+      _notes.insert(0, note);
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+
+  Future<void> updateNote(Note updatedNote) async {
+    try {
+      final note = await _repo.updateNote(updatedNote);
+      final index = _notes.indexWhere((n) => n.id == note.id);
+      if (index != -1) {
+        _notes[index] = note;
+        notifyListeners();
+      }
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteNote(String id) async {
+    try {
+      await _repo.deleteNote(id);
+      _notes.removeWhere((n) => n.id == id);
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
   }
 
   void setSearchQuery(String query) {
     _searchQuery = query;
     notifyListeners();
   }
-
-  void updateNote(Note updatedNote) {
-    final index = _notes.indexWhere((note) => note.createdAt == updatedNote.createdAt);
-    if (index != -1) {
-      _notes[index] = updatedNote;
-      notifyListeners();
-    }
-  }
-
-  void deleteNote(Note note) {
-    _notes.remove(note);
-    notifyListeners();
-  }
-
 }
 
 
@@ -78,7 +103,7 @@ class NoteDetailsViewModel with ChangeNotifier {
   void deleteSelectedNote(BuildContext context) {
     if (_selectedNote == null) return;
     final notesProvider = context.read<NotesProvider>();
-    notesProvider.deleteNote(_selectedNote!);
+    notesProvider.deleteNote(_selectedNote! as String);
     clearSelectedNote();
   }
 

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:saytask/repository/speech_provider.dart';     // Speech
+import 'package:saytask/repository/speech_provider.dart'; // Speech
 import 'package:saytask/repository/voice_record_provider_note.dart'; // Summary only
 import 'package:saytask/res/color.dart';
 import 'package:saytask/model/note_model.dart';
@@ -16,7 +16,7 @@ class CreateNoteScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final recordProvider = context.watch<VoiceRecordProvider>(); // Summary
     final notesProvider = context.read<NotesProvider>();
-    final speechProvider = context.watch<SpeechProvider>();     // Live text
+    final speechProvider = context.watch<SpeechProvider>(); // Live text
 
     return Scaffold(
       backgroundColor: AppColors.white,
@@ -24,7 +24,10 @@ class CreateNoteScreen extends StatelessWidget {
         backgroundColor: AppColors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_outlined, color: Colors.black),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_outlined,
+            color: Colors.black,
+          ),
           onPressed: () => context.pop(),
         ),
         title: Text(
@@ -51,7 +54,9 @@ class CreateNoteScreen extends StatelessWidget {
                   final started = await speechProvider.startListening();
                   if (!started) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please allow microphone access')),
+                      const SnackBar(
+                        content: Text('Please allow microphone access'),
+                      ),
                     );
                   }
                 }
@@ -142,31 +147,33 @@ class CreateNoteScreen extends StatelessWidget {
               ),
               child: recordProvider.summary.isNotEmpty
                   ? Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: recordProvider.summary
-                    .split('\n')
-                    .where((line) => line.trim().isNotEmpty)
-                    .map((line) => Padding(
-                  padding: EdgeInsets.only(bottom: 6.h),
-                  child: Text(
-                    line,
-                    style: GoogleFonts.inter(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ))
-                    .toList(),
-              )
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: recordProvider.summary
+                          .split('\n')
+                          .where((line) => line.trim().isNotEmpty)
+                          .map(
+                            (line) => Padding(
+                              padding: EdgeInsets.only(bottom: 6.h),
+                              child: Text(
+                                line,
+                                style: GoogleFonts.inter(
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w400,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    )
                   : Text(
-                "Your summarized key points will appear here...",
-                style: GoogleFonts.inter(
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.black54,
-                ),
-              ),
+                      "Your summarized key points will appear here...",
+                      style: GoogleFonts.inter(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.black54,
+                      ),
+                    ),
             ),
             SizedBox(height: 30.h),
 
@@ -175,16 +182,30 @@ class CreateNoteScreen extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    final newNote = Note(
-                      title: "New Note",
-                      content: speechProvider.text,
-                      createdAt: DateTime.now(),
-                    );
-                    notesProvider.addNote(newNote);
-                    speechProvider.clear();
-                    recordProvider.resetRecording(); // Clear summary
-                    context.pop();
+                  onPressed: () async {
+                    if (speechProvider.text.trim().isEmpty) return;
+
+                    final notesProvider = context.read<NotesProvider>();
+
+                    try {
+                      await notesProvider.addNote(speechProvider.text.trim());
+                      speechProvider.clear();
+                      recordProvider.resetRecording();
+                      if (context.mounted) context.pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Note saved!"),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text("Error: $e"),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF22C55E),

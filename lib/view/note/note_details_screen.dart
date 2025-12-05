@@ -17,23 +17,17 @@ class EditNoteViewModel with ChangeNotifier {
   bool get isSaving => _isSaving;
 
   final titleController = TextEditingController();
-  final contentController = TextEditingController();
-  final structuredSummaryController = TextEditingController();
+  final contentController = TextEditingController(); // original text
+  final structuredSummaryController = TextEditingController(); // bullet points
 
-  // 🟢 NEW: Initialize the controller with the note data
   void initialize(Note note) {
     titleController.text = note.title;
-    contentController.text = note.content;
-    structuredSummaryController.text =
-        note.structuredSummary ?? "• Try blue and orange for dashboard color\n• Talk with dev about login page bug\n• Change the heading font";
+    contentController.text = note.original; // ← API field: "original"
+    structuredSummaryController.text = note.structuredSummary; // ← from getter
   }
 
-  void enableEditing(Note note) {
+  void enableEditing() {
     _isEditing = true;
-    titleController.text = note.title;
-    contentController.text = note.content;
-    structuredSummaryController.text =
-        note.structuredSummary ?? "• Try blue and orange for dashboard color\n• Talk with dev about login page bug\n• Change the heading font";
     notifyListeners();
   }
 
@@ -42,23 +36,45 @@ class EditNoteViewModel with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> saveChanges(BuildContext context, Note note) async {
+  Future<void> saveChanges(BuildContext context, Note originalNote) async {
     _isSaving = true;
     notifyListeners();
 
-    final updatedNote = Note(
-      title: titleController.text.trim(),
-      content: contentController.text.trim(),
-      createdAt: note.createdAt,
-      structuredSummary: structuredSummaryController.text.trim(),
-    );
+    try {
+      // Parse bullet points back into List<String>
+      final List<String> points = structuredSummaryController.text
+          .split('\n')
+          .map((line) => line.replaceFirst(RegExp(r'^•\s*'), '').trim())
+          .where((line) => line.isNotEmpty)
+          .toList();
 
-    context.read<NotesProvider>().updateNote(updatedNote);
-    context.read<NoteDetailsViewModel>().setSelectedNote(updatedNote);
+      final updatedNote = originalNote.copyWith(
+        title: titleController.text.trim().isEmpty ? "Untitled Note" : titleController.text.trim(),
+        original: contentController.text.trim(),
+        summarized: Summarized(
+          summary: "", // your backend ignores this or fills it later
+          points: points,
+        ),
+      );
 
-    _isSaving = false;
-    _isEditing = false;
-    notifyListeners();
+      // Update in backend + local list
+      await context.read<NotesProvider>().updateNote(updatedNote);
+
+      // Update selected note in details VM
+      context.read<NoteDetailsViewModel>().setSelectedNote(updatedNote);
+
+      _isEditing = false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Note saved"), backgroundColor: Colors.green),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to save: $e"), backgroundColor: Colors.red),
+      );
+    } finally {
+      _isSaving = false;
+      notifyListeners();
+    }
   }
 
   @override
@@ -71,13 +87,14 @@ class EditNoteViewModel with ChangeNotifier {
 }
 
 class NoteDetailsScreen extends StatelessWidget {
-  const NoteDetailsScreen({super.key, required Note note});
+  const NoteDetailsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final noteDetailsVM = context.watch<NoteDetailsViewModel>();
     final note = noteDetailsVM.selectedNote;
 
+    // Safety: if no note, go back
     if (note == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => context.pop());
       return const SizedBox.shrink();
@@ -86,7 +103,7 @@ class NoteDetailsScreen extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (_) {
         final vm = EditNoteViewModel();
-        vm.initialize(note); // 🟢 Initialize with note data immediately
+        vm.initialize(note);
         return vm;
       },
       child: Consumer<EditNoteViewModel>(
@@ -107,11 +124,7 @@ class NoteDetailsScreen extends StatelessWidget {
                     width: 100.w,
                   ),
                   IconButton(
-                    icon: Icon(
-                      Icons.settings_outlined,
-                      color: Colors.black,
-                      size: 24.sp,
-                    ),
+                    icon: Icon(Icons.settings_outlined, color: Colors.black, size: 24.sp),
                     onPressed: () => context.push('/settings'),
                   ),
                 ],
@@ -124,81 +137,59 @@ class NoteDetailsScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     IconButton(
-                      icon: Icon(Icons.arrow_back_ios_new_outlined,
-                          size: 20.sp, color: Colors.black),
-                      onPressed: context.pop,
+                      icon: Icon(Icons.arrow_back_ios_new_outlined, size: 20.sp, color: Colors.black),
+                      onPressed: () => context.pop(),
                     ),
-                    editVM.isEditing
-                        ? TextField(
-                      controller: editVM.titleController,
-                      style: GoogleFonts.inter(
-                        fontSize: 18.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black,
+
+                    // Title - Editable
+                    if (editVM.isEditing)
+                      TextField(
+                        controller: editVM.titleController,
+                        style: GoogleFonts.inter(fontSize: 18.sp, fontWeight: FontWeight.w600),
+                        decoration: const InputDecoration(border: InputBorder.none, hintText: "Enter title..."),
+                      )
+                    else
+                      Text(
+                        note.title,
+                        style: GoogleFonts.inter(fontSize: 18.sp, fontWeight: FontWeight.w600, color: Colors.black),
                       ),
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        hintText: "Enter title...",
-                      ),
-                    )
-                        : const SizedBox.shrink(),
+
+                    SizedBox(height: 8.h),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        editVM.isEditing
-                            ? const SizedBox.shrink()
-                            : Text(
-                          note.title,
-                          style: GoogleFonts.inter(
-                            fontSize: 18.sp,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black,
-                          ),
-                        ),
+                        const SizedBox(),
                         IconButton(
-                          icon: Icon(
-                            Icons.delete_outline,
-                            color: AppColors.red,
-                            size: 24.sp,
-                          ),
+                          icon: Icon(Icons.delete_outline, color: AppColors.red, size: 24.sp),
                           onPressed: () async {
-                            final confirm = await showDialog<bool>(
+                            final confirmed = await showDialog<bool>(
                               context: context,
                               builder: (_) => const ConfirmDialog(
                                 title: "Delete Note",
-                                message:
-                                "Are you sure you want to delete this note?",
+                                message: "Are you sure you want to delete this note?",
                                 confirmText: "Delete",
                                 cancelText: "Cancel",
                               ),
                             );
-                            if (confirm == true) {
-                              noteDetailsVM.deleteSelectedNote(context);
-                              if (context.mounted) context.pop();
+
+                            if (confirmed == true && context.mounted) {
+                              await context.read<NotesProvider>().deleteNote(note.id);
+                              context.read<NoteDetailsViewModel>().clearSelectedNote();
+                              context.pop();
                             }
                           },
                         ),
                       ],
                     ),
+
                     Text(
                       "Created ${_timeAgo(note.createdAt)}",
-                      style: GoogleFonts.inter(
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.grey,
-                      ),
+                      style: GoogleFonts.inter(fontSize: 12.sp, color: Colors.grey),
                     ),
-                    SizedBox(height: 16.h),
+                    SizedBox(height: 20.h),
 
-                    // 🟢 Structured Summary (now visible and editable)
-                    Text(
-                      "Structured Summary:",
-                      style: GoogleFonts.inter(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black,
-                      ),
-                    ),
+                    // Structured Summary Section
+                    Text("Structured Summary:", style: GoogleFonts.inter(fontSize: 16.sp, fontWeight: FontWeight.w600)),
                     SizedBox(height: 8.h),
                     Container(
                       width: double.infinity,
@@ -210,43 +201,33 @@ class NoteDetailsScreen extends StatelessWidget {
                       ),
                       child: editVM.isEditing
                           ? TextField(
-                        controller: editVM.structuredSummaryController,
-                        maxLines: null,
-                        style: GoogleFonts.inter(fontSize: 14.sp),
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          hintText: "Write structured summary here...",
-                        ),
-                      )
-                          : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: editVM
-                            .structuredSummaryController.text
-                            .split('\n')
-                            .where((line) => line.trim().isNotEmpty) // Filter empty lines
-                            .map((line) => Padding(
-                          padding: EdgeInsets.only(bottom: 4.h),
-                          child: Text(
-                            line,
-                            style: GoogleFonts.inter(
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.w400),
-                          ),
-                        ))
-                            .toList(),
-                      ),
+                              controller: editVM.structuredSummaryController,
+                              maxLines: null,
+                              style: GoogleFonts.inter(fontSize: 14.sp),
+                              decoration: const InputDecoration(
+                                border: InputBorder.none,
+                                hintText: "• Point one\n• Point two...",
+                              ),
+                            )
+                          : (note.structuredSummary.trim().isEmpty
+                              ? Text("No summary points yet.", style: GoogleFonts.inter(fontSize: 14.sp, color: Colors.grey))
+                              : Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: note.structuredSummary
+                                      .split('\n')
+                                      .where((l) => l.trim().isNotEmpty)
+                                      .map((line) => Padding(
+                                            padding: EdgeInsets.only(bottom: 6.h),
+                                            child: Text(line, style: GoogleFonts.inter(fontSize: 14.sp)),
+                                          ))
+                                      .toList(),
+                                )),
                     ),
-                    SizedBox(height: 16.h),
+                    SizedBox(height: 20.h),
 
+                    // Original Note (Collapsible)
                     ExpansionTile(
-                      title: Text(
-                        "Original note",
-                        style: GoogleFonts.inter(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black,
-                        ),
-                      ),
+                      title: Text("Original note", style: GoogleFonts.inter(fontSize: 16.sp, fontWeight: FontWeight.w600)),
                       children: [
                         Container(
                           width: double.infinity,
@@ -258,30 +239,19 @@ class NoteDetailsScreen extends StatelessWidget {
                           ),
                           child: editVM.isEditing
                               ? TextField(
-                            controller: editVM.contentController,
-                            maxLines: null,
-                            style: GoogleFonts.inter(
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w400,
-                              color: Colors.black87,
-                            ),
-                            decoration: const InputDecoration(
-                              border: InputBorder.none,
-                              hintText: "Write your note here...",
-                            ),
-                          )
+                                  controller: editVM.contentController,
+                                  maxLines: null,
+                                  style: GoogleFonts.inter(fontSize: 14.sp),
+                                  decoration: const InputDecoration(border: InputBorder.none),
+                                )
                               : Text(
-                            note.content,
-                            style: GoogleFonts.inter(
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w400,
-                              color: Colors.black87,
-                            ),
-                          ),
+                                  note.original,
+                                  style: GoogleFonts.inter(fontSize: 14.sp, color: Colors.black87),
+                                ),
                         ),
                       ],
                     ),
-                    SizedBox(height: 24.h),
+                    SizedBox(height: 32.h),
 
                     // Edit / Save Button
                     SizedBox(
@@ -289,35 +259,31 @@ class NoteDetailsScreen extends StatelessWidget {
                       child: ElevatedButton(
                         onPressed: editVM.isSaving
                             ? null
-                            : () {
-                          if (editVM.isEditing) {
-                            editVM.saveChanges(context, note);
-                          } else {
-                            editVM.enableEditing(note);
-                          }
-                        },
+                            : () async {
+                                if (editVM.isEditing) {
+                                  await editVM.saveChanges(context, note);
+                                } else {
+                                  editVM.enableEditing();
+                                }
+                              },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF22C55E),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8.r),
-                          ),
-                          padding: EdgeInsets.symmetric(vertical: 14.h),
+                          padding: EdgeInsets.symmetric(vertical: 16.h),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
                         ),
                         child: editVM.isSaving
-                            ? const CircularProgressIndicator(
-                          color: Colors.white,
-                        )
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                              )
                             : Text(
-                          editVM.isEditing ? "Save Note" : "Edit Note",
-                          style: GoogleFonts.inter(
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
+                                editVM.isEditing ? "Save Changes" : "Edit Note",
+                                style: GoogleFonts.inter(fontSize: 16.sp, fontWeight: FontWeight.w600, color: Colors.white),
+                              ),
                       ),
                     ),
-                    SizedBox(height: 24.h),
+                    SizedBox(height: 40.h),
                   ],
                 ),
               ),
@@ -330,12 +296,9 @@ class NoteDetailsScreen extends StatelessWidget {
 
   String _timeAgo(DateTime date) {
     final diff = DateTime.now().difference(date);
-    if (diff.inDays >= 1) {
-      return "${diff.inDays} day${diff.inDays > 1 ? 's' : ''} ago";
-    } else if (diff.inHours >= 1) {
-      return "${diff.inHours} hour${diff.inHours > 1 ? 's' : ''} ago";
-    } else {
-      return "Just now";
-    }
+    if (diff.inDays >= 1) return "${diff.inDays} day${diff.inDays > 1 ? 's' : ''} ago";
+    if (diff.inHours >= 1) return "${diff.inHours} hour${diff.inHours > 1 ? 's' : ''} ago";
+    if (diff.inMinutes >= 1) return "${diff.inMinutes} minute${diff.inMinutes > 1 ? 's' : ''} ago";
+    return "Just now";
   }
 }

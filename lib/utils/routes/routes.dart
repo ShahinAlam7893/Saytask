@@ -313,19 +313,18 @@ final GoRouter router = GoRouter(
       ),
     ),
     GoRoute(
-      path: '/note_details',
-      pageBuilder: (context, state) {
-        final note = state.extra as Note;
-        return buildPageWithSlideTransition(
-          context: context,
-          state: state,
-          child: SmoothNavigationWrapper(
-            initialIndex: 3,
-            child: NoteDetailsScreen(note: note),
-          ),
-        );
-      },
-    ),
+  path: '/note_details',
+  pageBuilder: (context, state) {
+    return buildPageWithSlideTransition(
+      context: context,
+      state: state,
+      child: const SmoothNavigationWrapper(
+        initialIndex: 3,
+        child: NoteDetailsScreen(),
+      ),
+    );
+  },
+),
     GoRoute(
       path: '/task-details',
       name: 'taskDetails',

@@ -40,7 +40,7 @@ class NoteCard extends StatelessWidget {
       onTap: onTap ??
               () {
             context.read<NoteDetailsViewModel>().setSelectedNote(note);
-            context.push('/note_details', extra: note);
+            context.push('/note_details');
               },
       child: Container(
         margin: EdgeInsets.only(bottom: 12.h),
@@ -70,7 +70,7 @@ class NoteCard extends StatelessWidget {
             ),
             SizedBox(height: 6.h),
             Text(
-              note.content,
+              note.original,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.inter(

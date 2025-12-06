@@ -1,3 +1,5 @@
+// lib/view/event/event_details_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
@@ -5,12 +7,12 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:saytask/model/event_model.dart';
 import 'package:saytask/repository/calendar_service.dart';
-import '../../model/event_model.dart';
-import '../../res/color.dart';
+import 'package:saytask/res/color.dart';
 
 class EventDetailsScreen extends StatelessWidget {
-  final Event? event; // Nullable, used as a fallback or for initial navigation
+  final Event? event; // Can be passed directly (e.g. from voice card)
 
   const EventDetailsScreen({super.key, required this.event});
 
@@ -18,7 +20,7 @@ class EventDetailsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<CalendarProvider>(
       builder: (context, provider, child) {
-        // If event is null, show "No event found"
+        // If no event passed, show empty state
         if (event == null) {
           return Scaffold(
             backgroundColor: Colors.white,
@@ -31,16 +33,23 @@ class EventDetailsScreen extends StatelessWidget {
           );
         }
 
-        final dateKey = DateTime.utc(event!.date.year, event!.date.month, event!.date.day);
-        // Use the public selectedDayEvents or getEventsForDate
-        final events = provider.selectedDayEvents.isNotEmpty &&
-            DateUtils.isSameDay(provider.selectedDate, dateKey)
-            ? provider.selectedDayEvents
-            : provider.getEventsForDate(dateKey);
-        final currentEvent = events.firstWhere(
-              (e) => e.id == event!.id,
-          orElse: () => event!, // Fallback to passed event if not found
+        // Find the latest version of this event in provider (in case it was edited)
+        final dateKey = DateTime.utc(
+          event!.eventDateTime?.year ?? 2024,
+          event!.eventDateTime?.month ?? 1,
+          event!.eventDateTime?.day ?? 1,
         );
+
+        final eventsOnDay = provider.getEventsForDate(dateKey);
+        final currentEvent = eventsOnDay.firstWhere(
+          (e) => e.id == event!.id,
+          orElse: () => event!, // fallback to passed event
+        );
+
+        // Format date & time safely
+        final DateTime displayDate = currentEvent.eventDateTime ?? DateTime.now();
+        final String formattedDate = DateFormat('MMMM d, yyyy').format(displayDate);
+        final String formattedTime = DateFormat('h:mm a').format(displayDate);
 
         return Scaffold(
           backgroundColor: Colors.white,
@@ -63,9 +72,7 @@ class EventDetailsScreen extends StatelessWidget {
                     color: Colors.black,
                     size: 24.sp,
                   ),
-                  onPressed: () {
-                    context.push('/settings');
-                  },
+                  onPressed: () => context.push('/settings'),
                 ),
               ],
             ),
@@ -79,11 +86,13 @@ class EventDetailsScreen extends StatelessWidget {
                   children: [
                     IconButton(
                       icon: Icon(Icons.arrow_back_ios_new_outlined, size: 20.sp, color: Colors.black),
-                      onPressed: context.pop,
+                      onPressed: () => context.pop(),
                     ),
                   ],
                 ),
                 SizedBox(height: 10.h),
+
+                // Title Card
                 Container(
                   width: double.infinity,
                   padding: EdgeInsets.symmetric(vertical: 12.h),
@@ -99,88 +108,99 @@ class EventDetailsScreen extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                         color: Colors.black,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
                 ),
                 SizedBox(height: 16.h),
+
+                // Description
                 Text(
                   "Description:",
-                  style: GoogleFonts.inter(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: GoogleFonts.inter(fontSize: 14.sp, fontWeight: FontWeight.w600),
                 ),
                 SizedBox(height: 4.h),
                 Text(
                   currentEvent.description.isNotEmpty
                       ? currentEvent.description
                       : "No description added.",
-                  style: GoogleFonts.inter(
-                    fontSize: 13.sp,
-                    color: const Color(0xFF4B5563),
-                  ),
+                  style: GoogleFonts.inter(fontSize: 13.sp, color: const Color(0xFF4B5563)),
                 ),
                 SizedBox(height: 16.h),
+
+                // Date
                 Row(
                   children: [
                     Icon(Icons.calendar_today, size: 18.sp, color: Colors.black),
                     SizedBox(width: 8.w),
                     Text(
-                      DateFormat('MMMM d, yyyy').format(currentEvent.date),
-                      style: GoogleFonts.inter(
-                        fontSize: 13.sp,
-                        color: Colors.black,
-                      ),
+                      formattedDate,
+                      style: GoogleFonts.inter(fontSize: 13.sp, color: Colors.black),
                     ),
                   ],
                 ),
                 SizedBox(height: 10.h),
+
+                // Time
                 Row(
                   children: [
                     Icon(Icons.access_time, size: 18.sp, color: Colors.black),
                     SizedBox(width: 8.w),
                     Text(
-                      currentEvent.time.format(context),
-                      style: GoogleFonts.inter(
-                        fontSize: 13.sp,
-                        color: Colors.black,
-                      ),
+                      formattedTime,
+                      style: GoogleFonts.inter(fontSize: 13.sp, color: Colors.black),
                     ),
                   ],
                 ),
                 SizedBox(height: 10.h),
+
+                // Location
                 Row(
                   children: [
                     Icon(Icons.location_on, size: 18.sp, color: Colors.black),
                     SizedBox(width: 8.w),
-                    Text(
-                      currentEvent.location.isNotEmpty
-                          ? currentEvent.location
-                          : "No location specified",
-                      style: GoogleFonts.inter(
-                        fontSize: 13.sp,
-                        color: Colors.black,
+                    Expanded(
+                      child: Text(
+                        currentEvent.locationAddress.isNotEmpty
+                            ? currentEvent.locationAddress
+                            : "No location specified",
+                        style: GoogleFonts.inter(fontSize: 13.sp, color: Colors.black),
                       ),
                     ),
                   ],
                 ),
                 SizedBox(height: 10.h),
+
+                // Reminder + Call Me
                 Row(
                   children: [
                     Icon(Icons.notifications, size: 18.sp, color: Colors.black),
                     SizedBox(width: 8.w),
-                    Text(
-                      currentEvent.reminderMinutes != 0
-                          ? 'Reminder ${currentEvent.reminderMinutes} minute before'
-                          : 'No reminder set',
-                      style: GoogleFonts.inter(
-                        fontSize: 13.sp,
-                        color: Colors.black,
+                    Expanded(
+                      child: Text(
+                        currentEvent.reminderMinutes > 0
+                            ? "Reminder ${currentEvent.reminderMinutes} minute${currentEvent.reminderMinutes == 1 ? '' : 's'} before"
+                            : "No reminder set",
+                        style: GoogleFonts.inter(fontSize: 13.sp, color: Colors.black),
                       ),
                     ),
+                    if (currentEvent.callMe)
+                      Row(
+                        children: [
+                          SizedBox(width: 12.w),
+                          Icon(Icons.call, size: 18.sp, color: AppColors.green),
+                          SizedBox(width: 4.w),
+                          Text(
+                            "Call Me",
+                            style: GoogleFonts.inter(fontSize: 13.sp, color: AppColors.green, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
                   ],
                 ),
                 SizedBox(height: 30.h),
+
+                // Edit Button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -204,6 +224,7 @@ class EventDetailsScreen extends StatelessWidget {
                     ),
                   ),
                 ),
+                SizedBox(height: 20.h),
               ],
             ),
           ),

@@ -139,7 +139,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   controller: passwordController,
                   obscureText: obscurePassword,
                   validator: (v) =>
-                      v != null && v.length >= 6 ? null : 'Password too short',
+                      v != null && v.length >= 4 ? null : 'Password too short',
                   decoration: InputDecoration(
                     hintText: "Enter your password",
                     suffixIcon: IconButton(

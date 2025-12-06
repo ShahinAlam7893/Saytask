@@ -10,13 +10,13 @@ import 'package:saytask/core/api_endpoints.dart';
 import 'package:saytask/service/local_storage_service.dart';
 
 class VoiceClassification {
-  final String type;
+  final String type;           // "event", "task", "note"
   final String title;
   final String? description;
-  final String? date; 
+  final String? date;
   final String? time;
   final bool callMe;
-  final String reminder;  
+  final String reminder;
   final String rawText;
 
   VoiceClassification({
@@ -30,17 +30,39 @@ class VoiceClassification {
     required this.rawText,
   });
 
+  /// Perfectly matches your real API response
   factory VoiceClassification.fromJson(Map<String, dynamic> json, String rawText) {
+    // Your API uses "response_type", not "type"
+    final responseType = (json['response_type'] as String?)?.toLowerCase();
+
+    String detectedType = 'note'; // fallback
+    if (responseType == 'event' || responseType == 'task') {
+      detectedType = responseType ?? 'note';
+    }
+
+    // Title: use raw text if API didn't give one
+    String title = (json['title'] as String?)?.trim() ??
+        rawText.trim().split(' ').take(8).join(' ');
+    
+    if (title.length > 60) {
+      title = title.substring(0, 57) + '...';
+    }
+
     return VoiceClassification(
-      type: json['type']?.toString().toLowerCase() ?? 'note',
-      title: json['title'] ?? 'New Item',
+      type: detectedType,
+      title: title.isEmpty ? 'New Item' : title,
       description: json['description'] ?? json['note'],
-      date: json['date'],
-      time: json['time'],
-      callMe: json['call_me'] == true,
-      reminder: json['reminder'] ?? "At time of event",
+      date: json['date']?.toString(),
+      time: json['time']?.toString(),
+      callMe: json['call_me'] == true || json['call'] == true,
+      reminder: json['reminder']?.toString() ?? "At time of event",
       rawText: rawText,
     );
+  }
+
+  @override
+  String toString() {
+    return 'VoiceClassification(type: $type, title: $title, date: $date, time: $time)';
   }
 }
 
@@ -76,34 +98,24 @@ class SpeechProvider with ChangeNotifier {
   bool get shouldShowCard => _shouldShowCard;
   bool get isClassifying => _isClassifying;
 
-  static const Duration listenDuration = Duration(seconds: 30);
-  static const Duration pauseDuration = Duration(seconds: 5);
-
   Future<void> initialize() async {
     if (_isReady) return;
 
     int retryCount = 0;
-    const maxRetries = 2;
-
-    while (retryCount <= maxRetries && !_isReady) {
+    while (retryCount <= 2 && !_isReady) {
       final success = await _speech.initialize(
         onStatus: (status) => debugPrint('STT status: $status'),
-        onError: (error) {
-          debugPrint('STT init error: ${error.errorMsg}');
-          _errorMessage = error.errorMsg;
-          notifyListeners();
-        },
+        onError: (error) => debugPrint('STT error: ${error.errorMsg}'),
       );
 
       if (success) {
         _isReady = true;
         await _setupLocale();
-        _errorMessage = '';
-        debugPrint('Speech engine initialized');
-      } else {
-        retryCount++;
-        await Future.delayed(const Duration(seconds: 1));
+        debugPrint('Speech-to-Text initialized');
+        break;
       }
+      retryCount++;
+      await Future.delayed(const Duration(seconds: 1));
     }
     notifyListeners();
   }
@@ -111,27 +123,22 @@ class SpeechProvider with ChangeNotifier {
   Future<void> _setupLocale() async {
     try {
       final locales = await _speech.locales();
-      final preferred = locales.firstWhere(
+      _localeId = locales.firstWhere(
         (l) => l.localeId.startsWith('en'),
         orElse: () => locales.first,
-      );
-      _localeId = preferred.localeId;
+      ).localeId;
     } catch (e) {
-      debugPrint('Locale setup failed: $e');
+      _localeId = 'en_US';
     }
   }
 
   Future<bool> startListening() async {
     if (!_isReady) await initialize();
-    if (!_isReady) {
-      _errorMessage = 'Speech engine not available';
-      notifyListeners();
-      return false;
-    }
+    if (!_isReady) return false;
 
     final mic = await Permission.microphone.request();
     if (!mic.isGranted) {
-      _errorMessage = 'Microphone permission denied';
+      _errorMessage = 'Microphone permission required';
       notifyListeners();
       return false;
     }
@@ -139,44 +146,31 @@ class SpeechProvider with ChangeNotifier {
     if (_isListening) return true;
 
     _text = '';
-    _confidence = 0.0;
-    _errorMessage = '';
     _isListening = true;
     _shouldShowCard = false;
     _lastClassification = null;
-
     notifyListeners();
 
-    try {
-      await _speech.listen(
-        onResult: (result) {
-          _text = result.recognizedWords;
-          _confidence = result.hasConfidenceRating ? result.confidence : 0.0;
-          notifyListeners();
-        },
-        localeId: _localeId,
-        listenFor: listenDuration,
-        pauseFor: pauseDuration,
-        partialResults: true,
-        listenMode: ListenMode.confirmation,
-        cancelOnError: true,
-      );
-    } catch (e) {
-      _errorMessage = 'Failed to start listening';
-      _isListening = false;
-      notifyListeners();
-      return false;
-    }
+    await _speech.listen(
+      onResult: (result) {
+        _text = result.recognizedWords;
+        _confidence = result.hasConfidenceRating ? result.confidence : 0.0;
+        notifyListeners();
+      },
+      localeId: _localeId,
+      partialResults: true,
+      listenMode: ListenMode.confirmation,
+    );
+
     return true;
   }
 
-  /// Called when user taps mic to stop
   Future<void> stopListening() async {
     if (!_isListening) return;
 
     await _speech.stop();
     _isListening = false;
-    debugPrint('Speech stopped. Final text: "$_text"');
+    debugPrint('Speech stopped. Text: "$_text"');
 
     if (_text.trim().isEmpty) {
       notifyListeners();
@@ -188,38 +182,42 @@ class SpeechProvider with ChangeNotifier {
 
   Future<void> _classifyAndTriggerCard(String message) async {
     _isClassifying = true;
-    _errorMessage = '';
     notifyListeners();
 
     try {
       await LocalStorageService.init();
       final token = LocalStorageService.token;
-      if (token == null) throw Exception("Not logged in");
+      if (token == null) throw Exception("Not authenticated");
 
       final response = await http.post(
-        Uri.parse('${Urls.baseUrl}/chatbot/classify/'), 
+        Uri.parse('${Urls.baseUrl}/chatbot/classify/'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
-        body: json.encode({"message": text}),
+        body: json.encode({"message": message}), // CORRECT: use 'message' parameter
       );
 
+      debugPrint('Raw AI response: ${response.body}');
+
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+        final data = json.decode(response.body) as Map<String, dynamic>;
         _lastClassification = VoiceClassification.fromJson(data, message);
         _shouldShowCard = true;
-        debugPrint('AI Classification: ${_lastClassification!.type.toUpperCase()} ');
-        debugPrint('AI Classification Date: ${_lastClassification!.date?.toUpperCase()} ');
+
+        debugPrint('SUCCESS → Type: ${_lastClassification!.type.toUpperCase()}');
+        debugPrint('Title: ${_lastClassification!.title}');
+        debugPrint('Date: ${_lastClassification!.date}');
+        debugPrint('Time: ${_lastClassification!.time}');
       } else {
-        throw Exception("Server error: ${response.statusCode}");
+        throw Exception("Server error ${response.statusCode}");
       }
     } catch (e) {
-      debugPrint('Classification failed: $e');
-
+      debugPrint('AI classification failed: $e → using fallback');
+      // Fallback: treat as note
       _lastClassification = VoiceClassification(
         type: 'note',
-        title: 'Voice Note',
+        title: message.length > 40 ? message.substring(0, 37) + '...' : message,
         rawText: message,
       );
       _shouldShowCard = true;
@@ -228,7 +226,6 @@ class SpeechProvider with ChangeNotifier {
       notifyListeners();
     }
   }
-
 
   void resetCardState() {
     _shouldShowCard = false;
@@ -241,15 +238,6 @@ class SpeechProvider with ChangeNotifier {
     _text = '';
     _confidence = 0.0;
     _errorMessage = '';
-    notifyListeners();
-  }
-
-  Future<void> cancel() async {
-    if (_isListening) {
-      await _speech.cancel();
-      _isListening = false;
-    }
-    clear();
     notifyListeners();
   }
 

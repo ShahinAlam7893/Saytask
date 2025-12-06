@@ -1,15 +1,17 @@
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:saytask/model/today_task_model.dart';
 
 class TaskProvider extends ChangeNotifier {
   List<Task> _tasks = [];
-  List<Task> get tasks => _tasks;
+  List<Task> get tasks => List.unmodifiable(_tasks);
 
   TextEditingController? _titleController;
   TextEditingController? _descriptionController;
   TextEditingController? _startTimeController;
   DateTime? _startTime;
+
   final Set<String> _selectedCallReminders = {};
   final Set<String> _selectedNotificationReminders = {};
 
@@ -23,12 +25,24 @@ class TaskProvider extends ChangeNotifier {
   void initializeTaskDetails(Task task) {
     _titleController = TextEditingController(text: task.title);
     _descriptionController = TextEditingController(text: task.description);
+    _startTime = task.startTime;
     _startTimeController = TextEditingController(
       text: DateFormat('h:mm a').format(task.startTime),
     );
-    _startTime = task.startTime;
+
     _selectedCallReminders.clear();
     _selectedNotificationReminders.clear();
+
+    for (final reminder in task.reminders) {
+      final minutes = reminder.timeBefore;
+      final label = _minutesToLabel(minutes);
+      if (reminder.shouldCall) {
+        _selectedCallReminders.add(label);
+      } else {
+        _selectedNotificationReminders.add(label);
+      }
+    }
+
     notifyListeners();
   }
 
@@ -36,12 +50,15 @@ class TaskProvider extends ChangeNotifier {
     _titleController?.dispose();
     _descriptionController?.dispose();
     _startTimeController?.dispose();
+
     _titleController = null;
     _descriptionController = null;
     _startTimeController = null;
     _startTime = null;
+
     _selectedCallReminders.clear();
     _selectedNotificationReminders.clear();
+
     notifyListeners();
   }
 
@@ -54,10 +71,8 @@ class TaskProvider extends ChangeNotifier {
   void toggleCallReminder(String reminder) {
     if (_selectedCallReminders.contains(reminder)) {
       _selectedCallReminders.remove(reminder);
-      print('Call button for "$reminder" deselected');
     } else {
       _selectedCallReminders.add(reminder);
-      print('Call button for "$reminder" selected');
     }
     notifyListeners();
   }
@@ -65,80 +80,73 @@ class TaskProvider extends ChangeNotifier {
   void toggleNotificationReminder(String reminder) {
     if (_selectedNotificationReminders.contains(reminder)) {
       _selectedNotificationReminders.remove(reminder);
-      print('Notification button for "$reminder" deselected');
     } else {
       _selectedNotificationReminders.add(reminder);
-      print('Notification button for "$reminder" selected');
     }
     notifyListeners();
   }
-
-  void removeReminderFromTask(String taskId, String reminder) {
-    final taskIndex = _tasks.indexWhere((t) => t.id == taskId);
-    if (taskIndex != -1) {
-      final task = _tasks[taskIndex];
-      final updatedReminders = List<String>.from(task.reminders)..remove(reminder);
-      _tasks[taskIndex] = Task(
-        id: task.id,
-        title: task.title,
-        description: task.description,
-        startTime: task.startTime,
-        duration: task.duration,
-        tags: task.tags,
-        reminders: updatedReminders,
-        isCompleted: task.isCompleted,
-      );
-      _selectedCallReminders.remove(reminder);
-      _selectedNotificationReminders.remove(reminder);
-      print('Removed reminder "$reminder" from task $taskId. New reminders: $updatedReminders');
-      notifyListeners();
-    }
+  String _minutesToLabel(int minutes) {
+    if (minutes == 5) return "5 minutes before";
+    if (minutes == 10) return "10 minutes before";
+    if (minutes == 15) return "15 minutes before";
+    if (minutes == 30) return "30 minutes before";
+    if (minutes == 60) return "1 hour before";
+    if (minutes == 120) return "2 hours before";
+    return "$minutes minutes before";
   }
 
-  void addReminderToTask(String taskId, String reminder) {
+  int _labelToMinutes(String label) {
+    return int.tryParse(label.split(' ').first) ?? 0;
+  }
+
+  void addReminderToTask(String taskId, String reminderLabel) {
     final taskIndex = _tasks.indexWhere((t) => t.id == taskId);
-    if (taskIndex != -1) {
-      final task = _tasks[taskIndex];
-      final updatedReminders = List<String>.from(task.reminders)..add(reminder);
-      _tasks[taskIndex] = Task(
-        id: task.id,
-        title: task.title,
-        description: task.description,
-        startTime: task.startTime,
-        duration: task.duration,
-        tags: task.tags,
-        reminders: updatedReminders,
-        isCompleted: task.isCompleted,
-      );
-      print('Added reminder "$reminder" to task $taskId. New reminders: $updatedReminders');
-      notifyListeners();
+    if (taskIndex == -1) return;
+
+    final task = _tasks[taskIndex];
+    final minutes = _labelToMinutes(reminderLabel);
+    final types = <String>["notification"];
+    if (_selectedCallReminders.contains(reminderLabel)) {
+      types.add("call");
     }
+
+    final newReminder = TaskReminder(timeBefore: minutes, types: types);
+    final updatedReminders = [...task.reminders, newReminder];
+
+    _tasks[taskIndex] = task.copyWith(reminders: updatedReminders);
+    notifyListeners();
+  }
+
+  void removeReminderFromTask(String taskId, String reminderLabel) {
+    final taskIndex = _tasks.indexWhere((t) => t.id == taskId);
+    if (taskIndex == -1) return;
+
+    final task = _tasks[taskIndex];
+    final updatedReminders = task.reminders
+        .where((r) => _minutesToLabel(r.timeBefore) != reminderLabel)
+        .toList();
+
+    _tasks[taskIndex] = task.copyWith(reminders: updatedReminders);
+    _selectedCallReminders.remove(reminderLabel);
+    _selectedNotificationReminders.remove(reminderLabel);
+    notifyListeners();
   }
 
   void addTagToTask(String taskId, Tag tag) {
     final taskIndex = _tasks.indexWhere((t) => t.id == taskId);
-    if (taskIndex != -1) {
-      final task = _tasks[taskIndex];
-      final updatedTags = List<Tag>.from(task.tags)..add(tag);
-      _tasks[taskIndex] = Task(
-        id: task.id,
-        title: task.title,
-        description: task.description,
-        startTime: task.startTime,
-        duration: task.duration,
-        tags: updatedTags,
-        reminders: task.reminders,
-        isCompleted: task.isCompleted,
-      );
-      notifyListeners();
-    }
+    if (taskIndex == -1) return;
+
+    final task = _tasks[taskIndex];
+    final updatedTags = [...task.tags, tag];
+
+    _tasks[taskIndex] = task.copyWith(tags: updatedTags);
+    notifyListeners();
   }
 
-
   void updateTask(Task updatedTask) {
-    final taskIndex = _tasks.indexWhere((t) => t.id == updatedTask.id);
-    if (taskIndex != -1) {
-      _tasks[taskIndex] = updatedTask;
+    final index = _tasks.indexWhere((t) => t.id == updatedTask.id);
+    if (index != -1) {
+      _tasks[index] = updatedTask;
       notifyListeners();
     }
   }
@@ -149,37 +157,19 @@ class TaskProvider extends ChangeNotifier {
   }
 
   void updateTaskTime(String taskId, DateTime newStartTime) {
-    final taskIndex = _tasks.indexWhere((t) => t.id == taskId);
-    if (taskIndex != -1) {
-      final task = _tasks[taskIndex];
-      _tasks[taskIndex] = Task(
-        id: task.id,
-        title: task.title,
-        description: task.description,
-        startTime: newStartTime,
-        duration: task.duration,
-        tags: task.tags,
-        reminders: task.reminders,
-        isCompleted: task.isCompleted,
-      );
+    final index = _tasks.indexWhere((t) => t.id == taskId);
+    if (index != -1) {
+      final task = _tasks[index];
+      _tasks[index] = task.copyWith(startTime: newStartTime);
       notifyListeners();
     }
   }
 
   void toggleTaskCompletion(String taskId) {
-    final taskIndex = _tasks.indexWhere((t) => t.id == taskId);
-    if (taskIndex != -1) {
-      final task = _tasks[taskIndex];
-      _tasks[taskIndex] = Task(
-        id: task.id,
-        title: task.title,
-        description: task.description,
-        startTime: task.startTime,
-        duration: task.duration,
-        tags: task.tags,
-        reminders: task.reminders,
-        isCompleted: !task.isCompleted,
-      );
+    final index = _tasks.indexWhere((t) => t.id == taskId);
+    if (index != -1) {
+      final task = _tasks[index];
+      _tasks[index] = task.copyWith(isCompleted: !task.isCompleted);
       notifyListeners();
     }
   }

@@ -64,6 +64,8 @@ class _HomeScreenState extends State<HomeScreen>
     String fullHint = _preRecordingHints[_hintIndex];
 
     _typingTimer = Timer.periodic(const Duration(milliseconds: 80), (timer) {
+      if (!mounted) return;
+
       if (charIndex < fullHint.length) {
         setState(() {
           _displayedHint = fullHint.substring(0, charIndex + 1);
@@ -72,6 +74,7 @@ class _HomeScreenState extends State<HomeScreen>
       } else {
         timer.cancel();
         Future.delayed(const Duration(seconds: 2), () {
+          if (!mounted) return;
           setState(() {
             _hintIndex = (_hintIndex + 1) % _preRecordingHints.length;
           });
@@ -104,7 +107,10 @@ class _HomeScreenState extends State<HomeScreen>
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No file selected'), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text('No file selected'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -154,7 +160,11 @@ class _HomeScreenState extends State<HomeScreen>
               width: 100.w,
             ),
             IconButton(
-              icon: Icon(Icons.settings_outlined, color: Colors.black, size: 24.sp),
+              icon: Icon(
+                Icons.settings_outlined,
+                color: Colors.black,
+                size: 24.sp,
+              ),
               onPressed: () => context.push('/settings'),
             ),
           ],
@@ -165,7 +175,12 @@ class _HomeScreenState extends State<HomeScreen>
         children: [
           // Search Bar
           Padding(
-            padding: EdgeInsets.only(top: 50.h, left: 16.w, right: 16.w, bottom: 12.h),
+            padding: EdgeInsets.only(
+              top: 50.h,
+              left: 16.w,
+              right: 16.w,
+              bottom: 12.h,
+            ),
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12.r),
@@ -191,21 +206,37 @@ class _HomeScreenState extends State<HomeScreen>
                   fillColor: Colors.grey[50],
                   suffixIcon: IconButton(
                     onPressed: _pickFile,
-                    icon: Icon(Icons.attach_file, color: Colors.grey[600], size: 20.sp),
+                    icon: Icon(
+                      Icons.attach_file,
+                      color: Colors.grey[600],
+                      size: 20.sp,
+                    ),
                   ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(18.r),
-                    borderSide: BorderSide(color: AppColors.green!, width: 0.8.w),
+                    borderSide: BorderSide(
+                      color: AppColors.green!,
+                      width: 0.8.w,
+                    ),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(18.r),
-                    borderSide: BorderSide(color: AppColors.green!, width: 0.8.w),
+                    borderSide: BorderSide(
+                      color: AppColors.green!,
+                      width: 0.8.w,
+                    ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(18.r),
-                    borderSide: BorderSide(color: AppColors.green!, width: 0.8.w),
+                    borderSide: BorderSide(
+                      color: AppColors.green!,
+                      width: 0.8.w,
+                    ),
                   ),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 14.h),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 20.w,
+                    vertical: 14.h,
+                  ),
                 ),
               ),
             ),
@@ -230,8 +261,9 @@ class _HomeScreenState extends State<HomeScreen>
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: (isRecording ? Colors.red : AppColors.green)
-                                  .withOpacity(0.4),
+                              color:
+                                  (isRecording ? Colors.red : AppColors.green)
+                                      .withOpacity(0.4),
                               blurRadius: 25.r,
                               spreadRadius: 5.r,
                               offset: Offset(0, 4.h),
@@ -249,7 +281,11 @@ class _HomeScreenState extends State<HomeScreen>
                   SizedBox(height: 24.h),
                   RichText(
                     text: TextSpan(
-                      style: TextStyle(fontFamily: 'Inter', fontSize: 16.sp, color: Colors.black),
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16.sp,
+                        color: Colors.black,
+                      ),
                       children: [
                         const TextSpan(text: 'Tap to '),
                         WidgetSpan(
@@ -271,41 +307,43 @@ class _HomeScreenState extends State<HomeScreen>
                       duration: const Duration(milliseconds: 300),
                       child: isRecording
                           ? Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 20.w),
-                        child: ListView(
-                          controller: _scrollController,
-                          scrollDirection: Axis.horizontal,
-                          physics: const BouncingScrollPhysics(),
-                          children: [
-                            Center(
+                              padding: EdgeInsets.symmetric(horizontal: 20.w),
+                              child: ListView(
+                                controller: _scrollController,
+                                scrollDirection: Axis.horizontal,
+                                physics: const BouncingScrollPhysics(),
+                                children: [
+                                  Center(
+                                    child: Text(
+                                      speech.text.isEmpty
+                                          ? "Listening..."
+                                          : speech.text,
+                                      style: TextStyle(
+                                        fontSize: 16.sp,
+                                        color: AppColors.black,
+                                        fontFamily: 'Inter',
+                                        fontWeight: FontWeight.w400,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : Center(
                               child: Text(
-                                speech.text.isEmpty ? "Listening..." : speech.text,
+                                _displayedHint ?? "",
+                                key: ValueKey(_displayedHint),
                                 style: TextStyle(
                                   fontSize: 16.sp,
-                                  color: AppColors.black,
+                                  color: AppColors.green,
+                                  fontStyle: FontStyle.italic,
                                   fontFamily: 'Inter',
                                   fontWeight: FontWeight.w400,
                                 ),
                                 textAlign: TextAlign.center,
                               ),
                             ),
-                          ],
-                        ),
-                      )
-                          : Center(
-                        child: Text(
-                          _displayedHint ?? "",
-                          key: ValueKey(_displayedHint),
-                          style: TextStyle(
-                            fontSize: 16.sp,
-                            color: AppColors.green,
-                            fontStyle: FontStyle.italic,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w400,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
                     ),
                   ),
                 ],
@@ -317,16 +355,16 @@ class _HomeScreenState extends State<HomeScreen>
 
       floatingActionButton: settingsViewModel.enableAIChatbot
           ? SizedBox(
-        width: 60.w,
-        height: 60.h,
-        child: FloatingActionButton(
-          onPressed: () => context.push('/chat'),
-          backgroundColor: AppColors.green,
-          shape: const CircleBorder(),
-          elevation: 4,
-          child: Icon(Icons.chat, color: Colors.white, size: 28.sp),
-        ),
-      )
+              width: 60.w,
+              height: 60.h,
+              child: FloatingActionButton(
+                onPressed: () => context.push('/chat'),
+                backgroundColor: AppColors.green,
+                shape: const CircleBorder(),
+                elevation: 4,
+                child: Icon(Icons.chat, color: Colors.white, size: 28.sp),
+              ),
+            )
           : null,
     );
   }
@@ -354,8 +392,15 @@ class _HomeScreenState extends State<HomeScreen>
                     onTap: () => Navigator.of(context).pop(),
                     child: Container(
                       padding: EdgeInsets.all(6.w),
-                      decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                      child: Icon(Icons.close, color: Colors.black, size: 22.sp),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.close,
+                        color: Colors.black,
+                        size: 22.sp,
+                      ),
                     ),
                   ),
                 ),

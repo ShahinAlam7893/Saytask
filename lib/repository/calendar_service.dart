@@ -1,128 +1,149 @@
-// providers/calendar_provider.dart
+// lib/providers/calendar_provider.dart
+
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'dart:collection';
 import 'package:saytask/model/event_model.dart';
-import 'package:uuid/uuid.dart';
+import 'package:saytask/service/api_service.dart';
 
 class CalendarProvider extends ChangeNotifier {
   DateTime _selectedDate = DateTime.now();
   DateTime _focusedDate = DateTime.now();
 
-  final Map<DateTime, List<Event>> _events = LinkedHashMap<DateTime, List<Event>>(
-    equals: (a, b) => a.isAtSameMomentAs(b),
-    hashCode: (key) => key.day * 1000000 + key.month * 10000 + key.year,
-  )..addAll({
-    DateTime.utc(2025, 10, 11): [
-      Event(
-        id: const Uuid().v4(),
-        title: 'Meeting with Gabriel Boss',
-        location: 'Zoom meeting',
-        time: const TimeOfDay(hour: 06, minute: 00),
-        date: DateTime(2025, 10, 11),
-      ),
-    ],
-    DateTime.utc(2025, 10, 8): [
-      Event(
-        id: const Uuid().v4(),
-        title: 'Coffee with Shinchan',
-        location: 'Caffe Cristal',
-        time: const TimeOfDay(hour: 10, minute: 0),
-        date: DateTime(2025, 10, 8),
-      ),
-      Event(
-        id: const Uuid().v4(),
-        title: 'Workout',
-        location: 'Fit Health',
-        time: const TimeOfDay(hour: 20, minute: 0),
-        date: DateTime(2025, 10, 8),
-      ),
-    ],
-  });
+  List<Event> _allEvents = [];
+  bool _isLoading = true;
+  String? _errorMessage;
 
+  final Map<DateTime, List<Event>> _eventsByDate = LinkedHashMap<DateTime, List<Event>>(
+    equals: (a, b) => a.year == b.year && a.month == b.month && a.day == b.day,
+    hashCode: (key) => key.day * 1000000 + key.month * 10000 + key.year,
+  );
+
+  // ────────────────────── Getters ──────────────────────
   DateTime get selectedDate => _selectedDate;
   DateTime get focusedDate => _focusedDate;
+  bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
+  bool get hasError => _errorMessage != null;
 
-  List<Event> get selectedDayEvents => _events[DateTime.utc(_selectedDate.year, _selectedDate.month, _selectedDate.day)] ?? [];
+  List<Event> get selectedDayEvents {
+    final key = _normalizeDate(_selectedDate);
+    final events = _eventsByDate[key] ?? [];
+    debugPrint("selectedDayEvents for ${DateFormat('yyyy-MM-dd').format(_selectedDate)} → ${events.length} events");
+    return events;
+  }
 
-  // New method to get events for a specific date
   List<Event> getEventsForDate(DateTime date) {
-    final dateKey = DateTime.utc(date.year, date.month, date.day);
-    return _events[dateKey] ?? [];
+    final key = _normalizeDate(date);
+    final events = _eventsByDate[key] ?? [];
+    debugPrint("getEventsForDate ${DateFormat('yyyy-MM-dd').format(date)} → ${events.length} events");
+    return events;
   }
 
   bool hasEvents(DateTime day) {
-    final dateOnly = DateTime.utc(day.year, day.month, day.day);
-    return _events.containsKey(dateOnly);
+    final key = _normalizeDate(day);
+    final has = _eventsByDate[key]?.isNotEmpty ?? false;
+    if (has) debugPrint("hasEvents: YES on ${DateFormat('yyyy-MM-dd').format(day)}");
+    return has;
   }
 
-  void setInitialDate(DateTime date) {
-    _focusedDate = date;
-    _selectedDate = date;
-  }
+  // ────────────────────── Load from Backend ──────────────────────
+  Future<void> loadEvents() async {
+    debugPrint("loadEvents() called");
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
 
-  void selectDate(DateTime newDate) {
-    if (!DateUtils.isSameDay(_selectedDate, newDate)) {
-      _selectedDate = newDate;
+    try {
+      debugPrint("Fetching events from API...");
+      final events = await ApiService().fetchEvents();
+
+      debugPrint("Raw API returned ${events.length} events");
+
+      _allEvents = events;
+
+      for (var e in events) {
+        debugPrint("Event: '${e.title}' → DateTime: ${e.eventDateTime} (local)");
+        debugPrint("  UTC: ${e.eventDateTime?.toUtc()}");
+      }
+
+      _rebuildEventsMap();
+
+      debugPrint("Events map has ${_eventsByDate.length} dates with events");
+      _eventsByDate.keys.forEach((key) {
+        debugPrint("  Date ${DateFormat('yyyy-MM-dd').format(key.toLocal())} → ${_eventsByDate[key]!.length} events");
+      });
+    } catch (e, stack) {
+      _errorMessage = "Failed to load events";
+      debugPrint("ERROR loading events: $e");
+      debugPrint(stack.toString());
+    } finally {
+      _isLoading = false;
+      debugPrint("loadEvents() finished. isLoading = false");
       notifyListeners();
     }
   }
 
+  void selectDate(DateTime date) {
+    final oldDate = _selectedDate;
+    _selectedDate = date;
+    debugPrint("selectDate: $oldDate → $date");
+    notifyListeners();
+  }
+
   void previousMonth() {
-    _focusedDate = DateTime(_focusedDate.year, _focusedDate.month - 1, _focusedDate.day);
+    _focusedDate = DateTime(_focusedDate.year, _focusedDate.month - 1);
+    debugPrint("previousMonth → $_focusedDate");
     notifyListeners();
   }
 
   void nextMonth() {
-    _focusedDate = DateTime(_focusedDate.year, _focusedDate.month + 1, _focusedDate.day);
+    _focusedDate = DateTime(_focusedDate.year, _focusedDate.month + 1);
+    debugPrint("nextMonth → $_focusedDate");
+    notifyListeners();
+  }
+
+  void addEvent(Event event) {
+    debugPrint("addEvent: ${event.title} on ${event.eventDateTime}");
+    _allEvents.add(event);
+    _rebuildEventsMap();
     notifyListeners();
   }
 
   void updateEvent(Event oldEvent, Event newEvent) {
-    final dateKey = DateTime.utc(oldEvent.date.year, oldEvent.date.month, oldEvent.date.day);
-    final events = _events[dateKey];
-    if (events != null) {
-      final index = events.indexWhere((e) => e.id == oldEvent.id);
-      if (index != -1) {
-        events[index] = newEvent;
-        if (!DateUtils.isSameDay(oldEvent.date, newEvent.date)) {
-          events.removeAt(index);
-          if (events.isEmpty) _events.remove(dateKey);
-          final newDateKey = DateTime.utc(newEvent.date.year, newEvent.date.month, newEvent.date.day);
-          _events.putIfAbsent(newDateKey, () => []).add(newEvent);
-        }
-        notifyListeners();
-      }
-    }
-  }
-
-  void removeEvent(Event event) {
-    final dateKey = DateTime.utc(event.date.year, event.date.month, event.date.day);
-    final events = _events[dateKey];
-    if (events != null) {
-      events.removeWhere((e) => e.id == event.id);
-      if (events.isEmpty) _events.remove(dateKey);
+    final index = _allEvents.indexWhere((e) => e.id == oldEvent.id);
+    if (index != -1) {
+      debugPrint("updateEvent: ${oldEvent.title} → ${newEvent.title}");
+      _allEvents[index] = newEvent;
+      _rebuildEventsMap();
       notifyListeners();
     }
   }
 
-  void removeReminderFromEvent(Event event) {
-    final dateKey = DateTime.utc(event.date.year, event.date.month, event.date.day);
-    final events = _events[dateKey];
-    if (events != null) {
-      final index = events.indexWhere((e) => e.id == event.id);
-      if (index != -1) {
-        final updatedEvent = Event(
-          id: event.id,
-          title: event.title,
-          description: event.description,
-          location: event.location,
-          date: event.date,
-          time: event.time,
-          reminderMinutes: 0,
-        );
-        events[index] = updatedEvent;
-        notifyListeners();
+  void removeEvent(Event event) {
+    debugPrint("removeEvent: ${event.title}");
+    _allEvents.removeWhere((e) => e.id == event.id);
+    _rebuildEventsMap();
+    notifyListeners();
+  }
+
+  // ────────────────────── Helpers ──────────────────────
+  DateTime _normalizeDate(DateTime date) {
+    final normalized = DateTime.utc(date.year, date.month, date.day);
+    return normalized;
+  }
+
+  void _rebuildEventsMap() {
+    debugPrint("_rebuildEventsMap() called");
+    _eventsByDate.clear();
+    for (final event in _allEvents) {
+      if (event.eventDateTime == null) {
+        debugPrint("SKIPPING event with null eventDateTime: ${event.title}");
+        continue;
       }
+      final key = _normalizeDate(event.eventDateTime!);
+      _eventsByDate.putIfAbsent(key, () => []).add(event);
     }
+    debugPrint("_rebuildEventsMap() done. ${_eventsByDate.length} dates populated");
   }
 }

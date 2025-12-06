@@ -1,11 +1,12 @@
-// screens/calendar_screen.dart
+// lib/screens/calendar_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:saytask/model/event_model.dart';
 import 'package:saytask/repository/calendar_service.dart';
 import 'package:saytask/res/color.dart';
@@ -18,13 +19,11 @@ class CalendarScreen extends StatefulWidget {
 }
 
 class _CalendarScreenState extends State<CalendarScreen> {
-  // *** ADD initState ***
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = Provider.of<CalendarProvider>(context, listen: false);
-      provider.setInitialDate(DateTime(2025, 10, 8));
+      context.read<CalendarProvider>().loadEvents();
     });
   }
 
@@ -40,92 +39,66 @@ class _CalendarScreenState extends State<CalendarScreen> {
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // Logo
             SvgPicture.asset(
               'assets/images/Saytask_logo.svg',
               height: 24.h,
               width: 100.w,
             ),
-            // Settings Icon
             IconButton(
-              icon: Icon(
-                Icons.settings_outlined,
-                color: Colors.black,
-                size: 24.sp,
-              ),
-              onPressed: () {
-                context.push('/settings');
-              },
+              icon: Icon(Icons.settings_outlined, color: Colors.black, size: 24.sp),
+              onPressed: () => context.push('/settings'),
             ),
           ],
         ),
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: 12.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const CalendarHeader(),
-            SizedBox(height: 20.h),
-            const WeekdayHeaders(),
-            const CalendarGrid(),
-            SizedBox(height: 16.h),
-            const EventListHeader(),
-            SizedBox(height: 8.h),
+      body: Consumer<CalendarProvider>(
+        builder: (context, provider, child) {
+          if (provider.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            // 🔹 Instead of Expanded ListView, make it shrink-wrapped inside scroll
-            Consumer<CalendarProvider>(
-              builder: (context, provider, child) {
-                final events = provider.selectedDayEvents;
-                if (events.isEmpty) {
-                  return Padding(
-                    padding: EdgeInsets.only(top: 10.h, bottom: 30.h),
-                    child: const Center(child: Text("No events for this day.")),
-                  );
-                }
-                return ListView.builder(
-                  padding: EdgeInsets.only(top: 10.h, bottom: 30.h),
-                  physics: const NeverScrollableScrollPhysics(),
-                  shrinkWrap: true,
-                  itemCount: events.length,
-                  itemBuilder: (context, index) {
-                    final event = events[index];
-                    return EventCard(event: event);
+          return SingleChildScrollView(
+            padding: EdgeInsets.symmetric(horizontal: 12.w),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const CalendarHeader(),
+                SizedBox(height: 20.h),
+                const WeekdayHeaders(),
+                const CalendarGrid(),
+                SizedBox(height: 16.h),
+                const EventListHeader(),
+                SizedBox(height: 8.h),
+                Consumer<CalendarProvider>(
+                  builder: (context, provider, child) {
+                    final events = provider.selectedDayEvents;
+                    if (events.isEmpty) {
+                      return Padding(
+                        padding: EdgeInsets.only(top: 10.h, bottom: 30.h),
+                        child: const Center(child: Text("No events for this day.")),
+                      );
+                    }
+                    return ListView.builder(
+                      padding: EdgeInsets.only(top: 10.h, bottom: 30.h),
+                      physics: const NeverScrollableScrollPhysics(),
+                      shrinkWrap: true,
+                      itemCount: events.length,
+                      itemBuilder: (context, index) {
+                        final event = events[index];
+                        return EventCard(event: event);
+                      },
+                    );
                   },
-                );
-              },
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 }
 
-class EventList extends StatelessWidget {
-  const EventList({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<CalendarProvider>(
-      builder: (context, provider, child) {
-        final events = provider.selectedDayEvents;
-        if (events.isEmpty) {
-          return const Center(child: Text("No events for this day."));
-        }
-        return ListView.builder(
-          padding: EdgeInsets.only(top: 10.h),
-          itemCount: events.length,
-          itemBuilder: (context, index) {
-            final event = events[index];
-            return EventCard(event: event);
-          },
-        );
-      },
-    );
-  }
-}
-// 1. Calendar Header (Month Selector)
 class CalendarHeader extends StatelessWidget {
   const CalendarHeader({super.key});
 
@@ -144,10 +117,7 @@ class CalendarHeader extends StatelessWidget {
               ),
               Text(
                 DateFormat('MMMM yyyy').format(provider.focusedDate),
-                style: GoogleFonts.inter(
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: GoogleFonts.inter(fontSize: 18.sp, fontWeight: FontWeight.w600),
               ),
               IconButton(
                 icon: const Icon(Icons.arrow_forward_ios, size: 18),
@@ -160,9 +130,6 @@ class CalendarHeader extends StatelessWidget {
     );
   }
 }
-
-
-// 2. Weekday Headers (S, M, T, W, T, F, S)
 class WeekdayHeaders extends StatelessWidget {
   const WeekdayHeaders({super.key});
 
@@ -182,11 +149,6 @@ class WeekdayHeaders extends StatelessWidget {
     );
   }
 }
-
-
-
-// 3. Calendar Grid (Updated)
-// 3. Calendar Grid (Aligned + Current Month Only)
 class CalendarGrid extends StatelessWidget {
   const CalendarGrid({super.key});
 
@@ -196,21 +158,11 @@ class CalendarGrid extends StatelessWidget {
       builder: (context, provider, child) {
         final focusedDate = provider.focusedDate;
         final firstDayOfMonth = DateTime(focusedDate.year, focusedDate.month, 1);
-        final daysInMonth =
-            DateTime(focusedDate.year, focusedDate.month + 1, 0).day;
-
-        // Weekday of first day (Sunday = 0)
+        final daysInMonth = DateTime(focusedDate.year, focusedDate.month + 1, 0).day;
         int startingWeekday = firstDayOfMonth.weekday % 7;
 
-        // Days to display (empty slots before 1st day)
         final daysToDisplay = <DateTime?>[];
-
-        // Add empty cells before first day
-        for (int i = 0; i < startingWeekday; i++) {
-          daysToDisplay.add(null);
-        }
-
-        // Add days of current month
+        for (int i = 0; i < startingWeekday; i++) daysToDisplay.add(null);
         for (int i = 1; i <= daysInMonth; i++) {
           daysToDisplay.add(DateTime(focusedDate.year, focusedDate.month, i));
         }
@@ -218,38 +170,23 @@ class CalendarGrid extends StatelessWidget {
         return GridView.builder(
           physics: const NeverScrollableScrollPhysics(),
           shrinkWrap: true,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 7,
-          ),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 7),
           itemCount: daysToDisplay.length,
           itemBuilder: (context, index) {
             final day = daysToDisplay[index];
-            if (day == null) {
-              // empty cell for alignment
-              return const SizedBox.shrink();
-            }
-            return DayTile(
-              day: day,
-              isCurrentMonth: true,
-            );
+            if (day == null) return const SizedBox.shrink();
+            return DayTile(day: day, isCurrentMonth: true);
           },
         );
       },
     );
   }
 }
-
-
-// 4. Day Tile (Each date cell)
 class DayTile extends StatelessWidget {
   final DateTime day;
   final bool isCurrentMonth;
 
-  const DayTile({
-    super.key,
-    required this.day,
-    required this.isCurrentMonth,
-  });
+  const DayTile({super.key, required this.day, required this.isCurrentMonth});
 
   @override
   Widget build(BuildContext context) {
@@ -295,8 +232,6 @@ class DayTile extends StatelessWidget {
     );
   }
 }
-
-// 5. Event List Header (Below calendar)
 class EventListHeader extends StatelessWidget {
   const EventListHeader({super.key});
 
@@ -309,32 +244,19 @@ class EventListHeader extends StatelessWidget {
           children: [
             Text(
               DateFormat('yyyy, MMMM d').format(provider.selectedDate),
-              style: GoogleFonts.inter(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.bold,
-              ),
+              style: GoogleFonts.inter(fontSize: 16.sp, fontWeight: FontWeight.bold),
             ),
             ElevatedButton.icon(
-              onPressed: () {context.push('/home');},
-              icon: const Icon(
-                Icons.add,
-                size: 18,
-                color: Colors.black, // make icon black
-              ),
-              label: Text(
-                'Add Event',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  color: Colors.black, // make text black
-                ),
-              ),
+              onPressed: () => context.push('/home'),
+              icon: const Icon(Icons.add, size: 18, color: Colors.black),
+              label: Text('Add Event', style: TextStyle(fontFamily: 'Inter', color: Colors.black)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white, // button background color
+                backgroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8.r),
-                  side: const BorderSide(color: Colors.black, width: 1), // border color & width
+                  side: const BorderSide(color: Colors.black, width: 1),
                 ),
-                elevation: 0, // remove shadow for a flat look (optional)
+                elevation: 0,
               ),
             ),
           ],
@@ -343,8 +265,6 @@ class EventListHeader extends StatelessWidget {
     );
   }
 }
-
-// 6. Event Card
 class EventCard extends StatelessWidget {
   final Event event;
   const EventCard({super.key, required this.event});
@@ -352,10 +272,7 @@ class EventCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () {
-        context.push('/event_details', extra: event);
-        // Remove the SnackBar or make it functional if needed
-      },
+      onTap: () => context.push('/event_details', extra: event),
       child: Container(
         margin: EdgeInsets.only(bottom: 12.h),
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
@@ -377,11 +294,7 @@ class EventCard extends StatelessWidget {
           children: [
             Text(
               event.title,
-              style: GoogleFonts.inter(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w500,
-                color: Colors.black,
-              ),
+              style: GoogleFonts.inter(fontSize: 14.sp, fontWeight: FontWeight.w500, color: Colors.black),
             ),
             SizedBox(height: 8.h),
             Column(
@@ -391,7 +304,7 @@ class EventCard extends StatelessWidget {
                     Icon(Icons.location_on, size: 14.sp, color: AppColors.deepBlack),
                     SizedBox(width: 4.w),
                     Text(
-                      event.location,
+                      event.locationAddress.isNotEmpty ? event.locationAddress : 'No location specified',
                       style: GoogleFonts.inter(fontSize: 12.sp, color: AppColors.deepBlack),
                     ),
                   ],
@@ -402,7 +315,9 @@ class EventCard extends StatelessWidget {
                     Icon(Icons.access_time, size: 14.sp, color: AppColors.deepBlack),
                     SizedBox(width: 4.w),
                     Text(
-                      event.time.format(context),
+                      event.eventDateTime != null
+                          ? TimeOfDay.fromDateTime(event.eventDateTime!).format(context)
+                          : 'No time specified',
                       style: GoogleFonts.inter(fontSize: 12.sp, color: AppColors.deepBlack),
                     ),
                   ],

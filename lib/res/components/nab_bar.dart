@@ -1,4 +1,5 @@
 // lib/res/components/nab_bar.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -22,22 +23,20 @@ class SmoothNavigationWrapper extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<SmoothNavigationWrapper> createState() =>
-      _SmoothNavigationWrapperState();
+  State<SmoothNavigationWrapper> createState() => _SmoothNavigationWrapperState();
 }
 
 class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
   late PageController _pageController;
   late int _currentIndex;
   late ValueNotifier<bool> _isRecordingNotifier;
-  late ValueNotifier<bool> _showEventCardNotifier;
 
   List<Widget> get _pages => const [
-    HomeScreen(),
-    TodayScreen(),
-    CalendarScreen(),
-    NotesScreen(),
-  ];
+        HomeScreen(),
+        TodayScreen(),
+        CalendarScreen(),
+        NotesScreen(),
+      ];
 
   final List<String> _routes = [
     '/home',
@@ -52,7 +51,6 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: _currentIndex);
     _isRecordingNotifier = ValueNotifier<bool>(false);
-    _showEventCardNotifier = ValueNotifier<bool>(false);
   }
 
   @override
@@ -69,7 +67,6 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
   void dispose() {
     _pageController.dispose();
     _isRecordingNotifier.dispose();
-    _showEventCardNotifier.dispose();
     super.dispose();
   }
 
@@ -83,21 +80,13 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
       final speech = context.read<SpeechProvider>();
 
       if (_isRecordingNotifier.value) {
-        // STOP
-         await speech.stopListening();
-  _isRecordingNotifier.value = false;
+        // STOP RECORDING → AI will classify automatically
+        await speech.stopListening();
+        _isRecordingNotifier.value = false;
       } else {
-        // START
-        final started = speech.startListening();
-        if (started is Future) {
-          started.then((success) {
-            if (success) {
-              _isRecordingNotifier.value = true;
-            }
-          });
-        } else {
-          _isRecordingNotifier.value = true;
-        }
+        // START RECORDING
+        final started = await speech.startListening();
+        _isRecordingNotifier.value = started;
       }
       HapticFeedback.mediumImpact();
       return;
@@ -113,7 +102,6 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
     setState(() {
       _currentIndex = realPageIndex;
       _isRecordingNotifier.value = false;
-      _showEventCardNotifier.value = false;
     });
     _pageController.jumpToPage(realPageIndex);
   }
@@ -123,20 +111,21 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
     final isSinglePage = widget.child != null;
 
     return Theme(
-      data: Theme.of(context)
-          .copyWith(scaffoldBackgroundColor: AppColors.white),
+      data: Theme.of(context).copyWith(scaffoldBackgroundColor: AppColors.white),
       child: Scaffold(
         body: Stack(
           children: [
+            // Main Pages
             isSinglePage
                 ? widget.child!
                 : PageView(
-              controller: _pageController,
-              onPageChanged: _onPageChanged,
-              physics: const NeverScrollableScrollPhysics(),
-              children: _pages,
-            ),
+                    controller: _pageController,
+                    onPageChanged: _onPageChanged,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: _pages,
+                  ),
 
+            // Recording Overlay
             ValueListenableBuilder<bool>(
               valueListenable: _isRecordingNotifier,
               builder: (context, isRecording, child) {
@@ -149,11 +138,88 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
               },
             ),
 
-            ValueListenableBuilder<bool>(
-              valueListenable: _showEventCardNotifier,
-              builder: (context, showEventCard, child) {
-                if (!showEventCard) return const SizedBox.shrink();
-                return _buildEventPopup();
+            // SMART VOICE CARD — FULLY POWERED BY AI
+            Consumer<SpeechProvider>(
+              builder: (context, speech, child) {
+                if (!speech.shouldShowCard || speech.lastClassification == null) {
+                  return const SizedBox.shrink();
+                }
+
+                final cls = speech.lastClassification!;
+
+                return Positioned.fill(
+                  child: GestureDetector(
+                    onTap: () => speech.resetCardState(),
+                    child: Container(
+                      color: Colors.black.withOpacity(0.6),
+                      child: Center(
+                        child: Material(
+                          color: Colors.transparent,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Close Button
+                              Align(
+                                alignment: Alignment.topRight,
+                                child: GestureDetector(
+                                  onTap: () => speech.resetCardState(),
+                                  child: Container(
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.close, color: Colors.black),
+                                  ),
+                                ),
+                              ),
+
+                              // THE CARD — NOW SMART
+                              SpeackEventCard(
+                                eventTitle: cls.type == 'note'
+                                    ? 'New Note'
+                                    : (cls.title.isEmpty ? 'New Item' : cls.title),
+                                note: cls.description ?? cls.rawText,
+                                initialReminder: cls.type == 'note' ? "None" : (cls.reminder),
+                                initialCallMe: cls.type == 'note' ? false : cls.callMe,
+                                onSave: () async {
+                                  try {
+                                    final String message;
+                                    if (cls.type == 'note') {
+                                      message = "Note saved!";
+                                    } else if (cls.type == 'event') {
+                                      message = "Event: ${cls.title} saved!";
+                                    } else {
+                                      message = "Task: ${cls.title} saved!";
+                                    }
+
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(message),
+                                        backgroundColor: Colors.green,
+                                        behavior: SnackBarBehavior.floating,
+                                      ),
+                                    );
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text("Failed to save"),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  } finally {
+                                    speech.resetCardState();
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
               },
             ),
           ],
@@ -162,87 +228,6 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
       ),
     );
   }
-
-Widget _buildEventPopup() {
-  return Consumer<SpeechProvider>(
-    builder: (context, speech, child) {
-      // Only show card when AI has classified the voice input
-      if (!speech.shouldShowCard || speech.lastClassification == null) {
-        return const SizedBox.shrink();
-      }
-
-      final cls = speech.lastClassification!;
-
-      return Positioned.fill(
-        child: GestureDetector(
-          onTap: () {
-            _showEventCardNotifier.value = false;
-            speech.resetCardState(); // Important: reset after dismiss
-          },
-          child: Container(
-            color: Colors.black.withOpacity(0.6),
-            child: Center(
-              child: Material(
-                color: Colors.transparent,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Close button
-                    Align(
-                      alignment: Alignment.topRight,
-                      child: GestureDetector(
-                        onTap: () {
-                          _showEventCardNotifier.value = false;
-                          speech.resetCardState();
-                        },
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.all(8),
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.close, color: Colors.black),
-                        ),
-                      ),
-                    ),
-
-                    // SMART EVENT CARD FROM AI
-                    SpeackEventCard(
-                      eventTitle: cls.title,
-                      note: cls.description ?? cls.rawText,
-                      initialReminder: cls.reminder,
-                      initialCallMe: cls.callMe,
-                      onSave: () async {
-                        try {
-                          // You can expand this later with real save
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text("${cls.title} saved successfully!"),
-                              backgroundColor: Colors.green,
-                            ),
-                          );
-                        } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text("Save failed"), backgroundColor: Colors.red),
-                          );
-                        } finally {
-                          _showEventCardNotifier.value = false;
-                          speech.resetCardState();
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-    },
-  );
-}
-
 
   Widget _buildBottomNav() {
     return Container(
@@ -275,12 +260,12 @@ Widget _buildEventPopup() {
   }
 
   Widget _buildNavItem(
-      int index,
-      IconData icon,
-      IconData activeIcon,
-      String label, {
-        bool isMic = false,
-      }) {
+    int index,
+    IconData icon,
+    IconData activeIcon,
+    String label, {
+    bool isMic = false,
+  }) {
     if (isMic) {
       return ValueListenableBuilder<bool>(
         valueListenable: _isRecordingNotifier,
@@ -288,8 +273,6 @@ Widget _buildEventPopup() {
           return InkWell(
             onTap: () => _onTabTapped(index),
             borderRadius: BorderRadius.circular(30),
-            splashColor: Colors.white.withOpacity(0.3),
-            highlightColor: Colors.white.withOpacity(0.2),
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -297,8 +280,7 @@ Widget _buildEventPopup() {
                 color: isRecording ? Colors.red : AppColors.green,
                 boxShadow: [
                   BoxShadow(
-                    color: (isRecording ? Colors.red : AppColors.green)
-                        .withOpacity(0.3),
+                    color: (isRecording ? Colors.red : AppColors.green).withOpacity(0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),
@@ -322,10 +304,8 @@ Widget _buildEventPopup() {
       child: InkWell(
         onTap: () => _onTabTapped(index),
         borderRadius: BorderRadius.circular(12),
-        splashColor: AppColors.green.withOpacity(0.1),
-        highlightColor: AppColors.green.withOpacity(0.05),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 8),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -343,7 +323,6 @@ Widget _buildEventPopup() {
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                   fontFamily: 'Poppins',
                 ),
-                textAlign: TextAlign.center,
               ),
             ],
           ),
@@ -352,4 +331,3 @@ Widget _buildEventPopup() {
     );
   }
 }
-

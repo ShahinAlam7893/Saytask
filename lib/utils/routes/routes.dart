@@ -1,10 +1,7 @@
 // lib/config/router/go_router.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:saytask/model/note_model.dart';
-import 'package:saytask/model/today_task_model.dart';
 import 'package:saytask/model/event_model.dart';
-
 import 'package:saytask/view/chat/chat_screen.dart';
 import 'package:saytask/view/event/edit_event_screen.dart';
 import 'package:saytask/view/event/event_details_screen.dart';
@@ -16,7 +13,6 @@ import 'package:saytask/view/onboarding/onboarding_one.dart';
 import 'package:saytask/view/onboarding/onboarding_two.dart';
 import 'package:saytask/view/onboarding/onboarding_three.dart';
 import 'package:saytask/view/today/task_details_screen.dart';
-
 import '../../res/components/nab_bar.dart';
 import '../../view/auth_view/create_new_password_screen.dart';
 import '../../view/auth_view/forgot_pass_mail_screen.dart';
@@ -320,20 +316,21 @@ final GoRouter router = GoRouter(
   },
 ),
     GoRoute(
-      path: '/task-details',
-      name: 'taskDetails',
-      pageBuilder: (context, state) {
-        final task = state.extra as Task?;
-        return buildPageWithSlideTransition(
-          context: context,
-          state: state,
-          child: SmoothNavigationWrapper(
-            initialIndex: 1,
-            child: TaskDetailsScreen(task: task!),
-          ),
-        );
-      },
-    ),
+  path: '/task-details/:id',  // ← Use path parameter
+  name: 'taskDetails',
+  pageBuilder: (context, state) {
+    final taskId = state.pathParameters['id']!;
+
+    return buildPageWithSlideTransition(
+      context: context,
+      state: state,
+      child: SmoothNavigationWrapper(
+        initialIndex: 1,
+        child: TaskDetailsScreen(taskId: taskId),
+      ),
+    );
+  },
+),
     GoRoute(
       path: '/event_details',
       pageBuilder: (context, state) {

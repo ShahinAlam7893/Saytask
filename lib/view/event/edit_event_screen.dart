@@ -24,7 +24,7 @@ class _EventEditScreenState extends State<EventEditScreen> {
   late TextEditingController _locationController;
   late DateTime _selectedDateTime;
 
-  String _currentTimeText = "Loading..."; // Will be set safely
+  String _currentTimeText = "Loading..."; 
 
   @override
   void initState() {
@@ -41,8 +41,9 @@ class _EventEditScreenState extends State<EventEditScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Safe: context is ready here
+    // ignore: unnecessary_null_comparison
     _currentTimeText = _selectedDateTime != null
-        ? TimeOfDay.fromDateTime(_selectedDateTime!).format(context)
+        ? TimeOfDay.fromDateTime(_selectedDateTime).format(context)
         : "No time";
   }
 

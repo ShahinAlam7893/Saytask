@@ -186,7 +186,7 @@ class SpeechProvider with ChangeNotifier {
     await _classifyAndTriggerCard(_text.trim());
   }
 
-  Future<void> _classifyAndTriggerCard(String text) async {
+  Future<void> _classifyAndTriggerCard(String message) async {
     _isClassifying = true;
     _errorMessage = '';
     notifyListeners();
@@ -197,19 +197,20 @@ class SpeechProvider with ChangeNotifier {
       if (token == null) throw Exception("Not logged in");
 
       final response = await http.post(
-        Uri.parse('${Urls.baseUrl}/actions/classify/'), 
+        Uri.parse('${Urls.baseUrl}/chatbot/classify/'), 
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
-        body: json.encode({"text": text}),
+        body: json.encode({"message": text}),
       );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        _lastClassification = VoiceClassification.fromJson(data, text);
+        _lastClassification = VoiceClassification.fromJson(data, message);
         _shouldShowCard = true;
-        debugPrint('AI Classification: ${_lastClassification!.type.toUpperCase()}');
+        debugPrint('AI Classification: ${_lastClassification!.type.toUpperCase()} ');
+        debugPrint('AI Classification Date: ${_lastClassification!.date?.toUpperCase()} ');
       } else {
         throw Exception("Server error: ${response.statusCode}");
       }
@@ -219,7 +220,7 @@ class SpeechProvider with ChangeNotifier {
       _lastClassification = VoiceClassification(
         type: 'note',
         title: 'Voice Note',
-        rawText: text,
+        rawText: message,
       );
       _shouldShowCard = true;
     } finally {

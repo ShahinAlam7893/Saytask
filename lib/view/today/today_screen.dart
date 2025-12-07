@@ -27,10 +27,6 @@ class _TodayScreenState extends State<TodayScreen> {
   static const double _cardGap = 5.0;
   static const double _emptyHourHeight = 120.0;
 
-static const int _fallbackStartHour = 6;
-static const int _fallbackEndHour = 23;
-  
-
   bool _isCompactView = false;
 
   Task? _draggedTask;
@@ -90,38 +86,35 @@ static const int _fallbackEndHour = 23;
   bool _hasStrikethrough(Task t) => t.isCompleted;
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer<TaskProvider>(
-      builder: (context, tp, _) {
-        final now = DateTime.now();
-        final todayStart = DateTime(now.year, now.month, now.day);
-        final tomorrowStart = todayStart.add(const Duration(days: 1));
+Widget build(BuildContext context) {
+  return Consumer<TaskProvider>(
+    builder: (context, tp, _) {
+      final now = DateTime.now();
+      final todayDate = DateTime(now.year, now.month, now.day);
 
-        final todayTasks = tp.tasks.where((t) {
-          final start = t.startTime;
-          return start.isAfter(todayStart.subtract(const Duration(seconds: 1))) &&
-                 start.isBefore(tomorrowStart);
-        }).toList()
-          ..sort((a, b) => a.startTime.compareTo(b.startTime));
+      final todayTasks = tp.tasks.where((t) {
+        final taskDate = DateTime(t.startTime.year, t.startTime.month, t.startTime.day);
+        return taskDate == todayDate;
+      }).toList()
+        ..sort((a, b) => a.startTime.compareTo(b.startTime));
 
-      int startHour = _fallbackStartHour;
-      int endHour = _fallbackEndHour;
+      int startHour = 6;
+      int endHour = 23;
 
-        if (todayTasks.isNotEmpty) {
+      if (todayTasks.isNotEmpty) {
         final earliest = todayTasks.first.startTime.hour;
         final latest = todayTasks.last.startTime.hour;
 
-        startHour = earliest.clamp(0, _fallbackStartHour);
-
-        endHour = latest > _fallbackEndHour ? 23 : _fallbackEndHour;
+        startHour = earliest.clamp(0, 6);
+        endHour = latest >= 23 ? 23 : 23;
       }
 
-        return _isCompactView
+      return _isCompactView
           ? _buildCompactView(todayTasks)
           : _buildExpandedView(todayTasks, startHour, endHour);
-      },
-    );
-  }
+    },
+  );
+}
 
   // ──────────────────────────────────────────────────────────────
   // COMPACT VIEW

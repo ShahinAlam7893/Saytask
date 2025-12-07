@@ -1,6 +1,7 @@
+// lib/model/today_task_model.dart
+
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
-import 'package:intl/intl.dart';
 
 class Tag {
   final String name;
@@ -16,16 +17,17 @@ class Tag {
   Map<String, dynamic> toJson() => {"name": name};
 
   factory Tag.fromJson(Map<String, dynamic> json) {
+    final name = (json['name'] as String?)?.trim();
     return Tag(
-      name: (json['name'] as String?)?.trim().isNotEmpty == true ? json['name'] : 'Tag',
-      backgroundColor: Colors.blue,
-      textColor: Colors.white,
+      name: name?.isNotEmpty == true ? name! : 'Tag',
+      backgroundColor: const Color(0xFFE0E0E0),
+      textColor: Colors.black87,
     );
   }
 }
 
 class TaskReminder {
-  final int timeBefore;
+  final int timeBefore; // minutes
   final List<String> types;
 
   const TaskReminder({
@@ -41,8 +43,8 @@ class TaskReminder {
   factory TaskReminder.fromJson(Map<String, dynamic> json) {
     final types = (json['types'] as List<dynamic>?)
             ?.whereType<String>()
-            .toList()
-        ?? ["notification"];
+            .toList() ??
+        ["notification"];
 
     final timeBefore = (json['time_before'] as num?)?.toInt() ?? 0;
 
@@ -60,8 +62,8 @@ class Task {
   final String id;
   String title;
   String description;
-  DateTime startTime;
-  DateTime endTime; // ← Now required — no ?
+  DateTime startTime;     // ← LOCAL time (for display)
+  DateTime? endTime;      // ← LOCAL time (can be null)
   final Duration duration;
   List<Tag> tags;
   List<TaskReminder> reminders;
@@ -72,74 +74,60 @@ class Task {
     required this.title,
     this.description = '',
     required this.startTime,
-    DateTime? endTime,
+    this.endTime,
     Duration? duration,
     List<Tag>? tags,
     List<TaskReminder>? reminders,
     this.isCompleted = false,
   })  : id = id ?? const Uuid().v4(),
         duration = duration ?? const Duration(hours: 1),
-        endTime = endTime ?? startTime.add(duration ?? const Duration(hours: 1)),
         tags = tags ?? [],
         reminders = reminders ?? [];
 
-  // ────────────────────── TO JSON (Send to server in UTC without Z) ──────────────────────
+  // ────────────────────── SEND TO SERVER → UTC + 'Z' ──────────────────────
   Map<String, dynamic> toJson() {
     return {
       "title": title.trim().isEmpty ? "Untitled Task" : title.trim(),
       "description": description,
-      "start_time": DateFormat("yyyy-MM-dd'T'HH:mm:ss").format(startTime.toUtc()),
-      "end_time": DateFormat("yyyy-MM-dd'T'HH:mm:ss").format(endTime.toUtc()),
+      "start_time": startTime.toUtc().toIso8601String(),     // 2025-12-07T23:20:00Z
+      "end_time": endTime?.toUtc().toIso8601String(),
       "tags": tags.map((t) => t.name).toList(),
       "reminders": reminders.map((r) => r.toJson()).toList(),
       "completed": isCompleted,
     };
   }
 
-  // ────────────────────── FROM JSON (Receive from server — UTC → Local) ──────────────────────
+  // ────────────────────── RECEIVE FROM SERVER → UTC → LOCAL ──────────────────────
   factory Task.fromJson(Map<String, dynamic> json) {
-    // Parse start_time (UTC → Local)
-    DateTime startTime = DateTime.now();
-    if (json['start_time'] != null) {
-      final parsed = DateTime.tryParse(json['start_time']);
-      if (parsed != null) {
-        startTime = parsed.toLocal();
-      }
-    }
+    // Parse UTC strings
+    final startUtc = DateTime.tryParse(json['start_time'] ?? '');
+    final endUtc = DateTime.tryParse(json['end_time'] ?? '');
 
-    // Parse end_time (UTC → Local)
-    DateTime endTime = startTime.add(const Duration(hours: 1));
-    if (json['end_time'] != null) {
-      final parsed = DateTime.tryParse(json['end_time']);
-      if (parsed != null) {
-        endTime = parsed.toLocal();
-      }
-    }
+    // Convert to local time for display
+    final startTime = startUtc?.toLocal() ?? DateTime.now().toLocal();
+    final endTime = endUtc?.toLocal();
 
-    // Safe string parsing
-    final String title = (json['title'] as String?)?.trim().isNotEmpty == true
-        ? json['title'].trim()
-        : "Untitled Task";
+    // Title & description
+    final title = (json['title'] as String?)?.trim();
+    final description = json['description'] as String? ?? '';
 
-    final String description = (json['description'] as String?) ?? '';
-
-    // Parse tags safely
-    final List<Tag> tags = <Tag>[];
+    // Tags
+    final List<Tag> tags = [];
     final tagList = json['tags'] as List<dynamic>?;
     if (tagList != null) {
       for (var item in tagList) {
-        if (item is String && item.trim().isNotEmpty) {
+        if (item is String && item.toString().trim().isNotEmpty) {
           tags.add(Tag(
-            name: item.trim(),
-            backgroundColor: Colors.blue,
-            textColor: Colors.white,
+            name: item.toString().trim(),
+            backgroundColor: const Color(0xFFE0E0E0),
+            textColor: Colors.black87,
           ));
         }
       }
     }
 
-    // Parse reminders safely
-    final List<TaskReminder> reminders = <TaskReminder>[];
+    // Reminders
+    final List<TaskReminder> reminders = [];
     final reminderList = json['reminders'] as List<dynamic>?;
     if (reminderList != null) {
       for (var item in reminderList) {
@@ -147,7 +135,7 @@ class Task {
           try {
             reminders.add(TaskReminder.fromJson(item));
           } catch (e) {
-            // Skip invalid reminder
+            debugPrint("Invalid reminder: $e");
           }
         }
       }
@@ -155,13 +143,16 @@ class Task {
 
     return Task(
       id: json['id'] as String? ?? const Uuid().v4(),
-      title: title,
+      title: title?.isNotEmpty == true ? title! : "Untitled Task",
       description: description,
       startTime: startTime,
       endTime: endTime,
+      duration: endTime != null
+          ? endTime.difference(startTime)
+          : const Duration(hours: 1),
       tags: tags,
       reminders: reminders,
-      isCompleted: json['completed'] == true || json['completed'] == 1,
+      isCompleted: json['completed'] == true,
     );
   }
 
@@ -176,17 +167,13 @@ class Task {
     List<TaskReminder>? reminders,
     bool? isCompleted,
   }) {
-    final newStartTime = startTime ?? this.startTime;
-    final newDuration = duration ?? this.duration;
-    final newEndTime = endTime ?? newStartTime.add(newDuration);
-
     return Task(
       id: id ?? this.id,
       title: title ?? this.title,
       description: description ?? this.description,
-      startTime: newStartTime,
-      endTime: newEndTime,
-      duration: newDuration,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      duration: duration ?? this.duration,
       tags: tags ?? this.tags,
       reminders: reminders ?? this.reminders,
       isCompleted: isCompleted ?? this.isCompleted,

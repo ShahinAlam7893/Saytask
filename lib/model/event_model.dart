@@ -51,25 +51,25 @@ class Event {
   factory Event.fromJson(Map<String, dynamic> json) {
     DateTime? parsedUtc;
 
-    // Case 1: Full ISO string (preferred)
-    if (json['event_datetime'] != null) {
-      parsedUtc = DateTime.tryParse(json['event_datetime']);
-    }
-    // Case 2: Separate date + time (your current API)
-    else if (json['date'] != null) {
-      final dateStr = json['date'] as String;
-      final timeStr = json['time'] as String?;
-      if (timeStr != null) {
-        parsedUtc = DateTime.tryParse("$dateStr $timeStr");
-      } else {
-        parsedUtc = DateTime.tryParse(dateStr);
-      }
-    }
+if (json['event_datetime'] != null && json['event_datetime'] != 'null') {
+    parsedUtc = DateTime.tryParse(json['event_datetime']);
+  }
 
-    // Convert UTC → Local time
+  else if (json['start_time'] != null && json['start_time'] != 'null') {
+    parsedUtc = DateTime.tryParse(json['start_time']);
+  }
+  else if (json['date'] != null) {
+    final dateStr = json['date'] as String;
+    final timeStr = json['time'] as String?;
+    if (timeStr != null) {
+      parsedUtc = DateTime.tryParse("$dateStr $timeStr");
+    } else {
+      parsedUtc = DateTime.tryParse(dateStr);
+    }
+  }
+
     final DateTime? localDateTime = parsedUtc?.toLocal();
 
-    // Parse reminders
     int reminderMinutes = 0;
     bool callMe = false;
     final reminders = json['reminders'] as List<dynamic>? ?? [];
@@ -85,7 +85,7 @@ class Event {
       title: json['title'] ?? 'Untitled Event',
       description: json['description'] ?? '',
       locationAddress: json['location_address'] ?? '',
-      eventDateTime: localDateTime, // ← Stored as LOCAL
+      eventDateTime: localDateTime,
       reminderMinutes: reminderMinutes,
       callMe: callMe,
     );

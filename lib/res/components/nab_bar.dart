@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:saytask/repository/notes_service.dart';
 import 'package:saytask/repository/speech_provider.dart';
+import 'package:saytask/repository/today_task_service.dart';
+import 'package:saytask/repository/voice_action_repository.dart';
 import 'package:saytask/view/home/home_screen.dart';
 import 'package:saytask/view/today/today_screen.dart';
 import 'package:saytask/view/calendar/calendar_screen.dart';
@@ -80,11 +83,9 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
       final speech = context.read<SpeechProvider>();
 
       if (_isRecordingNotifier.value) {
-        // STOP RECORDING → AI will classify automatically
         await speech.stopListening();
         _isRecordingNotifier.value = false;
       } else {
-        // START RECORDING
         final started = await speech.startListening();
         _isRecordingNotifier.value = started;
       }
@@ -115,7 +116,6 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
       child: Scaffold(
         body: Stack(
           children: [
-            // Main Pages
             isSinglePage
                 ? widget.child!
                 : PageView(
@@ -125,7 +125,6 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
                     children: _pages,
                   ),
 
-            // Recording Overlay
             ValueListenableBuilder<bool>(
               valueListenable: _isRecordingNotifier,
               builder: (context, isRecording, child) {
@@ -138,7 +137,7 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
               },
             ),
 
-            // SMART VOICE CARD — FULLY POWERED BY AI
+            // VOICE CARD + SAVE TO BACKEND
             Consumer<SpeechProvider>(
               builder: (context, speech, child) {
                 if (!speech.shouldShowCard || speech.lastClassification == null) {
@@ -158,7 +157,6 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              // Close Button
                               Align(
                                 alignment: Alignment.topRight,
                                 child: GestureDetector(
@@ -175,7 +173,6 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
                                 ),
                               ),
 
-                              // THE CARD — NOW SMART
                               SpeackEventCard(
                                 eventTitle: cls.type == 'note'
                                     ? 'New Note'
@@ -184,27 +181,29 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
                                 initialReminder: cls.type == 'note' ? "None" : (cls.reminder),
                                 initialCallMe: cls.type == 'note' ? false : cls.callMe,
                                 onSave: () async {
+                                  final repo = VoiceActionRepository();
+
                                   try {
-                                    final String message;
-                                    if (cls.type == 'note') {
-                                      message = "Note saved!";
-                                    } else if (cls.type == 'event') {
-                                      message = "Event: ${cls.title} saved!";
-                                    } else {
-                                      message = "Task: ${cls.title} saved!";
+                                    await repo.saveVoiceAction(cls);
+
+                                    // Refresh correct screen
+                                    if (cls.type == 'task') {
+                                      context.read<TaskProvider>().loadTasks();
+                                    } else if (cls.type == 'note') {
+                                      context.read<NotesProvider>().loadNotes();
                                     }
 
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                        content: Text(message),
+                                        content: Text("${cls.type.toUpperCase()} saved!"),
                                         backgroundColor: Colors.green,
                                         behavior: SnackBarBehavior.floating,
                                       ),
                                     );
                                   } catch (e) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text("Failed to save"),
+                                      SnackBar(
+                                        content: Text("Failed to save: $e"),
                                         backgroundColor: Colors.red,
                                       ),
                                     );

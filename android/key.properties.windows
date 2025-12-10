@@ -1,0 +1,4 @@
+storePassword=saytask@org
+keyPassword=saytask@org
+keyAlias=upload
+storeFile=..\\secrets\\upload-keystore.jks

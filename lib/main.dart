@@ -3,6 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:saytask/firebase_options.dart';
+
 
 import 'package:saytask/repository/calendar_service.dart';
 import 'package:saytask/repository/chat_service.dart';
@@ -14,13 +17,17 @@ import 'package:saytask/repository/voice_record_provider_note.dart';
 import 'package:saytask/service/local_storage_service.dart';
 import 'repository/notes_service.dart';
 import 'repository/plan_service.dart';
-
 import 'view_model/auth_view_model.dart';
 import 'utils/routes/routes.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-final chatViewModel = ChatViewModel();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  final chatViewModel = ChatViewModel();
 
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 

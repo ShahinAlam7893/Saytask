@@ -76,6 +76,56 @@ class AuthRepository {
     await LocalStorageService.clear();
   }
 
+  Future<UserModel> signInWithGoogle({required String idToken}) async {
+    final url = Uri.parse('$baseUrl/auth/google-signin/');
+    final body = jsonEncode({'id_token': idToken});
+
+    final res = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: body,
+    );
+
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+
+      if (data.containsKey('access')) {
+        final token = data['access'];
+        await LocalStorageService.saveToken(token);
+        return UserModel.fromJwt(JwtHelper.decode(token));
+      }
+
+      throw Exception("Google sign-in successful but access token missing");
+    }
+
+    throw _handleError(res, "Google sign-in failed");
+  }
+
+
+Future<UserModel> signInWithApple({required String identity_token}) async {
+    final url = Uri.parse('$baseUrl/auth/apple-signin/');
+    final body = jsonEncode({'identity_token': identity_token});
+
+    final res = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: body,
+    );
+
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+
+      if (data.containsKey('access')) {
+        final token = data['access'];
+        await LocalStorageService.saveToken(token);
+        return UserModel.fromJwt(JwtHelper.decode(token));
+      }
+
+      throw Exception("Apple sign-in successful but access token missing");
+    }
+
+    throw _handleError(res, "Apple sign-in failed");
+  }
 
   Future<Map<String, dynamic>> forgotPassword(String email) async {
     final url = Uri.parse('$baseUrl/auth/forgot-password/');

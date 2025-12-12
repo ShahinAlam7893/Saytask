@@ -10,7 +10,7 @@ import 'package:saytask/core/api_endpoints.dart';
 import 'package:saytask/service/local_storage_service.dart';
 
 class VoiceClassification {
-  final String type;           // "event", "task", "note"
+  final String type; // "event", "task", "note"
   final String title;
   final String? description;
   final String? date;
@@ -18,6 +18,8 @@ class VoiceClassification {
   final bool callMe;
   final String reminder;
   final String rawText;
+  final List<String>? tags;
+  final String? location;
 
   VoiceClassification({
     required this.type,
@@ -28,24 +30,27 @@ class VoiceClassification {
     this.callMe = false,
     this.reminder = "At time of event",
     required this.rawText,
+    this.tags = const [],
+    this.location,
   });
 
-  /// Perfectly matches your real API response
-  factory VoiceClassification.fromJson(Map<String, dynamic> json, String rawText) {
-    // Your API uses "response_type", not "type"
+  factory VoiceClassification.fromJson(
+    Map<String, dynamic> json,
+    String rawText,
+  ) {
     final responseType = (json['response_type'] as String?)?.toLowerCase();
 
-    String detectedType = 'note'; // fallback
+    String detectedType = 'note';
     if (responseType == 'event' || responseType == 'task') {
       detectedType = responseType ?? 'note';
     }
 
-    // Title: use raw text if API didn't give one
-    String title = (json['title'] as String?)?.trim() ??
+    String title =
+        (json['title'] as String?)?.trim() ??
         rawText.trim().split(' ').take(8).join(' ');
-    
+
     if (title.length > 60) {
-      title = title.substring(0, 57) + '...';
+      title = '${title.substring(0, 57)}...';
     }
 
     return VoiceClassification(
@@ -57,6 +62,8 @@ class VoiceClassification {
       callMe: json['call_me'] == true || json['call'] == true,
       reminder: json['reminder']?.toString() ?? "At time of event",
       rawText: rawText,
+     tags: List<String>.from(json['tags'] ?? []),
+      location: json['location'],
     );
   }
 
@@ -73,7 +80,6 @@ class SpeechProvider with ChangeNotifier {
 
   final SpeechToText _speech = SpeechToText();
 
-  // Speech state
   bool _isReady = false;
   bool _isListening = false;
   String _text = '';
@@ -81,7 +87,6 @@ class SpeechProvider with ChangeNotifier {
   String _localeId = 'en_US';
   String _errorMessage = '';
 
-  // Classification state
   VoiceClassification? _lastClassification;
   bool _shouldShowCard = false;
   bool _isClassifying = false;
@@ -123,10 +128,12 @@ class SpeechProvider with ChangeNotifier {
   Future<void> _setupLocale() async {
     try {
       final locales = await _speech.locales();
-      _localeId = locales.firstWhere(
-        (l) => l.localeId.startsWith('en'),
-        orElse: () => locales.first,
-      ).localeId;
+      _localeId = locales
+          .firstWhere(
+            (l) => l.localeId.startsWith('en'),
+            orElse: () => locales.first,
+          )
+          .localeId;
     } catch (e) {
       _localeId = 'en_US';
     }
@@ -195,7 +202,9 @@ class SpeechProvider with ChangeNotifier {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
-        body: json.encode({"message": message}), // CORRECT: use 'message' parameter
+        body: json.encode({
+          "message": message,
+        }), // CORRECT: use 'message' parameter
       );
 
       debugPrint('Raw AI response: ${response.body}');
@@ -205,7 +214,9 @@ class SpeechProvider with ChangeNotifier {
         _lastClassification = VoiceClassification.fromJson(data, message);
         _shouldShowCard = true;
 
-        debugPrint('SUCCESS → Type: ${_lastClassification!.type.toUpperCase()}');
+        debugPrint(
+          'SUCCESS → Type: ${_lastClassification!.type.toUpperCase()}',
+        );
         debugPrint('Title: ${_lastClassification!.title}');
         debugPrint('Date: ${_lastClassification!.date}');
         debugPrint('Time: ${_lastClassification!.time}');

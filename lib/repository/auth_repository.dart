@@ -1,6 +1,7 @@
 // lib/repository/auth_repository.dart
 
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:saytask/core/api_endpoints.dart';
 import 'package:saytask/service/local_storage_service.dart';
@@ -144,7 +145,6 @@ Future<UserModel> signInWithApple({required String identity_token}) async {
     throw _handleError(res, "Failed to send OTP");
   }
 
- 
   Future<Map<String, dynamic>> verifyResetOtp({
     required String token,
     required String otp,
@@ -165,7 +165,6 @@ Future<UserModel> signInWithApple({required String identity_token}) async {
     throw _handleError(res, "OTP verification failed");
   }
 
-
   Future<bool> setNewPassword({
     required String token,
     required String newPassword,
@@ -184,7 +183,6 @@ Future<UserModel> signInWithApple({required String identity_token}) async {
     throw _handleError(res, "Reset password failed");
   }
 
-
   Future<Map<String, dynamic>> resendOtp(String token) async {
     final url = Uri.parse('$baseUrl/auth/resend-otp/');
     final body = jsonEncode({'token': token});
@@ -200,6 +198,52 @@ Future<UserModel> signInWithApple({required String identity_token}) async {
     throw _handleError(res, "Resend OTP failed");
   }
 
+  Future<void> changePassword({
+  required String currentPassword,
+  required String newPassword,
+}) async {
+  final token = LocalStorageService.token;
+  if (token == null) {
+    debugPrint("changePassword() ERROR: No token found");
+    throw Exception("Not authenticated");
+  }
+
+  debugPrint("changePassword() → Sending request...");
+  debugPrint("Token: ${token.substring(0, 20)}...");
+  debugPrint("Current password: $currentPassword");
+  debugPrint("New password: $newPassword");
+
+  try {
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/change-password/'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: json.encode({
+        "current_password": currentPassword,
+        "new_password": newPassword,
+      }),
+    );
+
+    debugPrint("changePassword() RESPONSE:");
+    debugPrint("Status Code: ${response.statusCode}");
+    debugPrint("Response Body: ${response.body}");
+
+    if (response.statusCode == 200) {
+      debugPrint("PASSWORD CHANGED SUCCESSFULLY!");
+      return;
+    } else {
+      final error = json.decode(response.body);
+      final msg = error['message'] ?? error['error'] ?? "Unknown error";
+      debugPrint("changePassword() FAILED: $msg");
+      throw Exception(msg);
+    }
+  } catch (e) {
+    debugPrint("changePassword() EXCEPTION: $e");
+    rethrow;
+  }
+}
 
   Exception _handleError(http.Response res, String defaultMsg) {
     try {
@@ -215,49 +259,50 @@ Future<UserModel> signInWithApple({required String identity_token}) async {
     return Exception("$defaultMsg (Code: ${res.statusCode})");
   }
 
-Future<void> updateProfile(UserModel updatedUser) async {
-  final url = Uri.parse('$baseUrl/auth/profile/');
-  final token = LocalStorageService.token;
+  Future<void> updateProfile(UserModel updatedUser) async {
+    final url = Uri.parse('$baseUrl/auth/profile/');
+    final token = LocalStorageService.token;
 
-  if (token == null) throw Exception("No access token found");
-  Map<String, dynamic> body = {};
+    if (token == null) throw Exception("No access token found");
+    Map<String, dynamic> body = {};
 
-  if (updatedUser.fullName.isNotEmpty) {
-    body["first_name"] = updatedUser.fullName;
+    if (updatedUser.fullName.isNotEmpty) {
+      body["first_name"] = updatedUser.fullName;
+    }
+    if (updatedUser.gender != null && updatedUser.gender!.isNotEmpty) {
+      body["gender"] = updatedUser.gender;
+    }
+    if (updatedUser.dateOfBirth != null &&
+        updatedUser.dateOfBirth!.isNotEmpty) {
+      body["birth_date"] = updatedUser.dateOfBirth;
+    }
+    if (updatedUser.country != null && updatedUser.country!.isNotEmpty) {
+      body["country"] = updatedUser.country;
+    }
+    if (updatedUser.phoneNumber != null &&
+        updatedUser.phoneNumber!.isNotEmpty) {
+      body["phone_number"] = updatedUser.phoneNumber;
+    }
+
+    body["notifications_enabled"] = updatedUser.notificationsEnabled;
+
+    print("Sending profile update: $body");
+
+    final res = await http.patch(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(body),
+    );
+
+    print("Response: ${res.statusCode} ${res.body}");
+
+    if (res.statusCode == 200 || res.statusCode == 201) {
+      return;
+    }
+
+    throw _handleError(res, "Failed to update profile");
   }
-  if (updatedUser.gender != null && updatedUser.gender!.isNotEmpty) {
-    body["gender"] = updatedUser.gender;
-  }
-  if (updatedUser.dateOfBirth != null && updatedUser.dateOfBirth!.isNotEmpty) {
-    body["birth_date"] = updatedUser.dateOfBirth;
-  }
-  if (updatedUser.country != null && updatedUser.country!.isNotEmpty) {
-    body["country"] = updatedUser.country;
-  }
-  if (updatedUser.phoneNumber != null && updatedUser.phoneNumber!.isNotEmpty) {
-    body["phone_number"] = updatedUser.phoneNumber;
-  }
-
-  body["notifications_enabled"] = updatedUser.notificationsEnabled;
-
-  print("Sending profile update: $body");
-
-  final res = await http.patch(
-    url,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
-    },
-    body: jsonEncode(body),
-  );
-
-  print("Response: ${res.statusCode} ${res.body}"); 
-
-  if (res.statusCode == 200 || res.statusCode == 201) {
-    return;
-  }
-
-  throw _handleError(res, "Failed to update profile");
-}
-
 }

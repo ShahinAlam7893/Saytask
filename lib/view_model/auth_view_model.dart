@@ -1,6 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'package:saytask/core/api_endpoints.dart';
 import 'package:saytask/core/jwt_helper.dart';
 import 'package:saytask/model/user_model.dart';
 import 'package:saytask/repository/auth_repository.dart';
@@ -20,6 +25,11 @@ class AuthViewModel extends ChangeNotifier {
   bool isLoading = false;
 
   bool isUpdatingProfile = false;
+
+  bool _isChangingPassword = false;
+  bool get isChangingPassword => _isChangingPassword;
+  String? _changePasswordError;
+  String? get changePasswordError => _changePasswordError;
 
   bool get isLoggedIn {
     final token = _accessToken ?? LocalStorageService.token;
@@ -298,5 +308,32 @@ class AuthViewModel extends ChangeNotifier {
     );
 
     print(credential.identityToken);
+  }
+  Future<bool> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    _isChangingPassword = true;
+    _changePasswordError = null;
+    notifyListeners();
+
+    debugPrint("AuthViewModel.changePassword() → Starting...");
+
+    try {
+      await _repository.changePassword(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      );
+
+      debugPrint("AuthViewModel → Password changed successfully!");
+      return true;
+    } catch (e) {
+      _changePasswordError = e.toString().replaceFirst('Exception: ', '');
+      debugPrint("AuthViewModel → Error: $_changePasswordError");
+      return false;
+    } finally {
+      _isChangingPassword = false;
+      notifyListeners();
+    }
   }
 }

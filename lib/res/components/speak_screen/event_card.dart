@@ -107,8 +107,7 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
                     SizedBox(width: 10.w),
                     Text(
                       "Call Me",
-                      style:
-                      TextStyle(color: Colors.white70, fontSize: 14.sp),
+                      style: TextStyle(color: Colors.white70, fontSize: 14.sp),
                     ),
                   ],
                 ),
@@ -129,8 +128,11 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
             // --- Notification Dropdown ---
             Row(
               children: [
-                Icon(Icons.notifications_none,
-                    color: Colors.white70, size: 18.sp),
+                Icon(
+                  Icons.notifications_none,
+                  color: Colors.white70,
+                  size: 18.sp,
+                ),
                 SizedBox(width: 4.w),
                 Expanded(
                   child: DropdownButtonHideUnderline(
@@ -142,36 +144,41 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
                             value: selectedReminder,
                             dropdownColor: Colors.grey[850],
                             icon: const SizedBox.shrink(),
-                            items: [
-                              "At time of event",
-                              "5 minutes before",
-                              "10 minutes before",
-                              "15 minutes before",
-                              "30 minutes before",
-                              "1 hour before",
-                              "2 hours before",
-                              "13:00, 1 day before",
-                              "None",
-                            ].map((e) {
-                              return DropdownMenuItem(
-                                value: e,
-                                child: Row(
-                                  mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      e,
-                                      style: TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 14.sp),
+                            items:
+                                [
+                                  "At time of event",
+                                  "5 minutes before",
+                                  "10 minutes before",
+                                  "15 minutes before",
+                                  "30 minutes before",
+                                  "1 hour before",
+                                  "2 hours before",
+                                  "13:00, 1 day before",
+                                  "None",
+                                ].map((e) {
+                                  return DropdownMenuItem(
+                                    value: e,
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          e,
+                                          style: TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 14.sp,
+                                          ),
+                                        ),
+                                        if (e == selectedReminder)
+                                          const Icon(
+                                            Icons.check,
+                                            color: Colors.green,
+                                            size: 18,
+                                          ),
+                                      ],
                                     ),
-                                    if (e == selectedReminder)
-                                      const Icon(Icons.check,
-                                          color: Colors.green, size: 18),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
+                                  );
+                                }).toList(),
                             onChanged: (val) {
                               if (val != null) {
                                 setState(() => selectedReminder = val);
@@ -179,8 +186,11 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
                             },
                           ),
                         ),
-                        Icon(Icons.arrow_drop_down,
-                            color: Colors.white70, size: 26.sp),
+                        Icon(
+                          Icons.arrow_drop_down,
+                          color: Colors.white70,
+                          size: 26.sp,
+                        ),
                       ],
                     ),
                   ),
@@ -192,8 +202,11 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
             // --- Note Row ---
             Row(
               children: [
-                Icon(Icons.note_add_rounded,
-                    color: Colors.white70, size: 18.sp),
+                Icon(
+                  Icons.note_add_rounded,
+                  color: Colors.white70,
+                  size: 18.sp,
+                ),
                 SizedBox(width: 4.w),
                 Expanded(
                   child: Text(
@@ -219,7 +232,9 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
                     _buildMiniButton("Delay +1 hr", Icons.access_time),
                     _buildMiniButton("Call Me", Icons.call),
                     _buildMiniButton(
-                        "Remind 30 min", Icons.notifications_active),
+                      "Remind 30 min",
+                      Icons.notifications_active,
+                    ),
                   ],
                 ),
               ),
@@ -228,8 +243,11 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
                 children: [
                   IconButton(
                     onPressed: () {},
-                    icon: Icon(Icons.delete_outline,
-                        color: AppColors.white, size: 22.sp),
+                    icon: Icon(
+                      Icons.delete_outline,
+                      color: AppColors.white,
+                      size: 22.sp,
+                    ),
                   ),
                   IconButton(
                     onPressed: () {},
@@ -238,6 +256,40 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
                 ],
               ),
             ],
+            Center(
+              child: SizedBox(
+                height: 40.h,
+                width: 120.w,
+                child: ElevatedButton(
+                  onPressed: widget.onSave,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.green,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20.r),
+                    ),
+                    elevation: 6,
+                    padding: EdgeInsets.symmetric(horizontal: 16.w),
+                    minimumSize: Size(100.w, 40.h),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.check, size: 18.sp),
+                      SizedBox(width: 6.w),
+                      Text(
+                        "Save",
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -261,4 +313,3 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
     );
   }
 }
-

@@ -68,7 +68,6 @@ class ApiService {
           .map((json) => Task.fromJson(json))
           .toList();
     }
-
     throw Exception('Failed to load tasks: ${response.statusCode}');
   }
 

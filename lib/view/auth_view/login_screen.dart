@@ -253,7 +253,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(8.r),
                       ),
                     ),
-                    onPressed: () {},
+                    onPressed: ()async {
+                      print("Google Sign-In pressed");
+                            await authVM.signInWithGoogle();
+                    },
                     icon: SvgPicture.asset(
                       'assets/images/google_ic.svg',
                       width: 20.w,
@@ -277,7 +280,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(8.r),
                       ),
                     ),
-                    onPressed: () {},
+                    onPressed: () async{
+                      await authVM.appleLogin();
+                    },
                     icon: SvgPicture.asset(
                       'assets/images/ri_apple-line.svg',
                       width: 20.w,

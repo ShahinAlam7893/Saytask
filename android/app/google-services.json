@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "273923021290",
+    "project_id": "voicetask-2181a",
+    "storage_bucket": "voicetask-2181a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:273923021290:android:37326c5e5674ffa96a3a93",
+        "android_client_info": {
+          "package_name": "com.app.saytask"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "273923021290-so9e8ej2jpv5q750r6pot6qg777qa7he.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.app.saytask",
+            "certificate_hash": "724f8f482a303f6ce18ee8334bd5990017542b67"
+          }
+        },
+        {
+          "client_id": "273923021290-ja7r28begjqao2c1chtuhm0mvs0235e6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC_6Cvk9T95Cl9AEHR4HunGPuIx0QmlC6g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "273923021290-ja7r28begjqao2c1chtuhm0mvs0235e6.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "273923021290-ol17j3c8d2ddn8l3ls15hieii070n5aa.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.saytask"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

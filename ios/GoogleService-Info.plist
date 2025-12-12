@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>273923021290-ol17j3c8d2ddn8l3ls15hieii070n5aa.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.273923021290-ol17j3c8d2ddn8l3ls15hieii070n5aa</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>273923021290-so9e8ej2jpv5q750r6pot6qg777qa7he.apps.googleusercontent.com</string>
+	<key>API_KEY</key>
+	<string>AIzaSyAFRJvC7tHffvhiGN-lWAdb1P8Z4P_GglY</string>
+	<key>GCM_SENDER_ID</key>
+	<string>273923021290</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.example.saytask</string>
+	<key>PROJECT_ID</key>
+	<string>voicetask-2181a</string>
+	<key>STORAGE_BUCKET</key>
+	<string>voicetask-2181a.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:273923021290:ios:5858afc2524a9e936a3a93</string>
+</dict>
+</plist>

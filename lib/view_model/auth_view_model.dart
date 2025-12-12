@@ -4,6 +4,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:saytask/core/jwt_helper.dart';
 import 'package:saytask/model/user_model.dart';
 import 'package:saytask/repository/auth_repository.dart';
+import 'package:saytask/repository/notification_service.dart';
 import 'package:saytask/service/local_storage_service.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
@@ -91,6 +92,7 @@ class AuthViewModel extends ChangeNotifier {
       if (token != null) {
         _accessToken = token;
         currentUser = user;
+        await NotificationService.sendFcmTokenToBackend();
         notifyListeners();
         return true;
       }
@@ -273,7 +275,6 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
-  // /// Optional: Sign out from both Firebase and Google
   Future<void> googleSignOut() async {
     await _auth.signOut();
     await _googleSignIn.signOut();

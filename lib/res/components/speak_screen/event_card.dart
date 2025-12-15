@@ -1,5 +1,4 @@
 // lib/res/components/speak_screen/event_card.dart
-// FINAL VERSION — ALL YOUR REQUIREMENTS MET
 
 import 'package:flutter/material.dart';
 import 'package:flutter_advanced_switch/flutter_advanced_switch.dart';
@@ -15,21 +14,23 @@ import 'package:saytask/repository/voice_action_repository.dart';
 import 'package:saytask/res/components/top_snackbar.dart';
 
 class SpeackEventCard extends StatefulWidget {
-  const SpeackEventCard({super.key, required Future<Null> Function() onSave});
+  final Future<void> Function()? onSave;
+
+  const SpeackEventCard({super.key, this.onSave});
 
   @override
   State<SpeackEventCard> createState() => _SpeackEventCardState();
 }
 
 class _SpeackEventCardState extends State<SpeackEventCard> {
-  final ValueNotifier<bool> _callMeController = ValueNotifier<bool>(false);
+  late ValueNotifier<bool> _callMeController;
   bool isExpanded = false;
   bool isEditing = false;
 
   late String _title;
   late String _note;
   late String _selectedReminder;
-  DateTime? _eventDateTime;
+  late DateTime _eventDateTime;
 
   late TextEditingController _titleController;
   late TextEditingController _noteController;
@@ -40,11 +41,9 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
     final cls = context.read<SpeechProvider>().lastClassification!;
 
     _title = cls.title.isEmpty ? "New Item" : cls.title;
-    _note = cls.description?.isNotEmpty == true
-        ? cls.description!
-        : cls.rawText; // ← Raw voice text
+    _note = cls.description?.isNotEmpty == true ? cls.description! : cls.rawText;
     _selectedReminder = cls.reminder;
-    _callMeController.value = cls.callMe;
+    _callMeController = ValueNotifier<bool>(cls.callMe);
 
     _titleController = TextEditingController(text: _title);
     _noteController = TextEditingController(text: _note);
@@ -55,30 +54,59 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
       final hour = cls.time != null ? int.parse(cls.time!.split(':')[0]) : 10;
       final minute = cls.time != null ? int.parse(cls.time!.split(':')[1]) : 0;
       _eventDateTime = DateTime(date.year, date.month, date.day, hour, minute);
+    } else {
+      _eventDateTime = DateTime.now().add(const Duration(hours: 1));
     }
+
+    _callMeController.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
+    _callMeController.dispose();
     _titleController.dispose();
     _noteController.dispose();
     super.dispose();
   }
 
+  // ⭐ DELAY +1 HOUR
   void _delayOneHour() {
-    if (_eventDateTime != null) {
-      setState(() {
-        _eventDateTime = _eventDateTime!.add(const Duration(hours: 1));
-      });
-      TopSnackBar.show(
-        context,
-        message: 'Time delayed by 1 hour',
-        backgroundColor: Colors.green[700]!,
-      );
-    }
+    setState(() {
+      _eventDateTime = _eventDateTime.add(const Duration(hours: 1));
+    });
+    TopSnackBar.show(
+      context,
+      message: 'Time delayed by 1 hour',
+      backgroundColor: Colors.green[700]!,
+    );
   }
 
-  Map<String, dynamic> _getReminder() {
+  // ⭐ SET CALL ME
+  void _setCallMe() {
+    _callMeController.value = true;
+    TopSnackBar.show(
+      context,
+      message: 'Call reminder enabled',
+      backgroundColor: Colors.green[700]!,
+    );
+  }
+
+  // ⭐ SET REMINDER TO 30 MIN
+  void _setReminder30Min() {
+    setState(() {
+      _selectedReminder = "30 minutes before";
+    });
+    TopSnackBar.show(
+      context,
+      message: 'Reminder set to 30 minutes before',
+      backgroundColor: Colors.green[700]!,
+    );
+  }
+
+  // ⭐ BUILD REMINDERS
+  List<Map<String, dynamic>> _buildReminders() {
+    final reminders = <Map<String, dynamic>>[];
+
     final minutesMap = {
       "5 minutes before": 5,
       "10 minutes before": 10,
@@ -87,23 +115,107 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
       "1 hour before": 60,
       "2 hours before": 120,
     };
+
     final minutes = minutesMap[_selectedReminder] ?? 0;
-    if (minutes == 0) return {};
-    return {
-      "time_before": minutes,
-      "types": _callMeController.value
-          ? ["notification", "call"]
-          : ["notification"],
-    };
+
+    if (_callMeController.value) {
+      reminders.add({
+        "time_before": 10,
+        "types": ["notification", "call"],
+      });
+    }
+
+    if (minutes > 0 && _selectedReminder != "At time of event" && _selectedReminder != "None") {
+      reminders.add({
+        "time_before": minutes,
+        "types": ["notification"],
+      });
+    }
+
+    // Default reminder if none specified
+    if (reminders.isEmpty) {
+      reminders.add({
+        "time_before": 30,
+        "types": ["notification"],
+      });
+    }
+
+    return reminders;
+  }
+
+  // ⭐ SAVE TO DATABASE
+  Future<void> _saveToDatabase() async {
+    final cls = context.read<SpeechProvider>().lastClassification!;
+    final repo = VoiceActionRepository();
+
+    try {
+      final startTimeStr = _eventDateTime.toUtc().toIso8601String();
+      final title = _titleController.text.trim().isEmpty ? "New Item" : _titleController.text.trim();
+      final description = _noteController.text.trim();
+
+      if (cls.type == 'event') {
+        final endTimeStr = _eventDateTime.add(const Duration(hours: 1)).toUtc().toIso8601String();
+
+        await repo.createEvent({
+          "title": title,
+          "description": description,
+          "event_datetime": startTimeStr,
+          "start_time": startTimeStr,
+          "end_time": endTimeStr,
+          "location_address": cls.location ?? "",
+        });
+
+        if (!mounted) return;
+        await context.read<CalendarProvider>().loadEvents();
+
+      } else if (cls.type == 'task') {
+        await repo.createTask({
+          "title": title,
+          "description": description,
+          "start_time": startTimeStr,
+          "duration": 60,
+          "tags": cls.tags ?? [],
+          "reminders": _buildReminders(),
+          "completed": false,
+        });
+
+        if (!mounted) return;
+        await context.read<TaskProvider>().loadTasks();
+
+      } else {
+        await repo.createNote(description);
+
+        if (!mounted) return;
+        await context.read<NotesProvider>().loadNotes();
+      }
+
+      if (!mounted) return;
+
+      TopSnackBar.show(
+        context,
+        message: "Saved successfully!",
+        backgroundColor: Colors.green[700]!,
+      );
+
+      context.read<SpeechProvider>().resetCardState();
+
+    } catch (e) {
+      if (!mounted) return;
+
+      TopSnackBar.show(
+        context,
+        message: "Error: $e",
+        backgroundColor: Colors.red[700]!,
+        duration: const Duration(seconds: 4),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final cls = context.watch<SpeechProvider>().lastClassification!;
-    final dateText = cls.date == null
-        ? "No date"
-        : DateFormat('EEE, d MMM').format(DateTime.parse(cls.date!));
-    final timeText = cls.isAllDay || cls.time == null ? "All-day" : cls.time!;
+    final dateText = DateFormat('EEE, d MMM').format(_eventDateTime);
+    final timeText = DateFormat('h:mm a').format(_eventDateTime);
 
     return GestureDetector(
       onTap: () => setState(() => isExpanded = !isExpanded),
@@ -117,7 +229,6 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Title Row
             Row(
               children: [
                 Container(width: 4.w, height: 16.h, color: Colors.green),
@@ -141,7 +252,7 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
                           onChanged: (v) => _title = v,
                         )
                       : Text(
-                          _title,
+                          _titleController.text,
                           style: TextStyle(
                             fontFamily: 'Inter',
                             color: Colors.white,
@@ -161,7 +272,7 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
             ),
             SizedBox(height: 4.h),
 
-            // Date & Time Row
+            // DATE & TIME ROW
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -180,8 +291,6 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
               ],
             ),
             SizedBox(height: 8.h),
-
-            // Call Me Switch
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -209,7 +318,7 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
             ),
             SizedBox(height: 6.h),
 
-            // Reminder Dropdown
+            // REMINDER DROPDOWN
             Row(
               children: [
                 Icon(
@@ -228,40 +337,38 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
                             value: _selectedReminder,
                             dropdownColor: Colors.grey[850],
                             icon: const SizedBox.shrink(),
-                            items:
-                                [
-                                  "At time of event",
-                                  "5 minutes before",
-                                  "10 minutes before",
-                                  "15 minutes before",
-                                  "30 minutes before",
-                                  "1 hour before",
-                                  "2 hours before",
-                                  "None",
-                                ].map((e) {
-                                  return DropdownMenuItem(
-                                    value: e,
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          e,
-                                          style: TextStyle(
-                                            color: Colors.white70,
-                                            fontSize: 14.sp,
-                                          ),
-                                        ),
-                                        if (e == _selectedReminder)
-                                          const Icon(
-                                            Icons.check,
-                                            color: Colors.green,
-                                            size: 18,
-                                          ),
-                                      ],
+                            items: [
+                              "At time of event",
+                              "5 minutes before",
+                              "10 minutes before",
+                              "15 minutes before",
+                              "30 minutes before",
+                              "1 hour before",
+                              "2 hours before",
+                              "None",
+                            ].map((e) {
+                              return DropdownMenuItem(
+                                value: e,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      e,
+                                      style: TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 14.sp,
+                                      ),
                                     ),
-                                  );
-                                }).toList(),
+                                    if (e == _selectedReminder)
+                                      const Icon(
+                                        Icons.check,
+                                        color: Colors.green,
+                                        size: 18,
+                                      ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
                             onChanged: (val) {
                               if (val != null) {
                                 setState(() => _selectedReminder = val);
@@ -282,7 +389,7 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
             ),
             SizedBox(height: 8.h),
 
-            // Note / Description
+            // NOTE / DESCRIPTION
             Row(
               children: [
                 Icon(
@@ -309,7 +416,7 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
                           onChanged: (v) => _note = v,
                         )
                       : Text(
-                          _note,
+                          _noteController.text,
                           style: TextStyle(
                             color: Colors.white70,
                             fontSize: 14.sp,
@@ -321,7 +428,7 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
               ],
             ),
 
-            // Expanded Section
+            // EXPANDED SECTION
             if (isExpanded) ...[
               SizedBox(height: 12.h),
               Center(
@@ -330,23 +437,9 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
                   runSpacing: 8.h,
                   alignment: WrapAlignment.center,
                   children: [
-                    _buildMiniButton(
-                      "Delay +1 hr",
-                      Icons.access_time,
-                      _delayOneHour,
-                    ),
-                    _buildMiniButton(
-                      "Call Me",
-                      Icons.call,
-                      () => _callMeController.value = true,
-                    ),
-                    _buildMiniButton(
-                      "Remind 30 min",
-                      Icons.notifications_active,
-                      () {
-                        setState(() => _selectedReminder = "30 minutes before");
-                      },
-                    ),
+                    _buildMiniButton("Delay +1 hr", Icons.access_time, _delayOneHour),
+                    _buildMiniButton("Call Me", Icons.call, _setCallMe),
+                    _buildMiniButton("Remind 30 min", Icons.notifications_active, _setReminder30Min),
                   ],
                 ),
               ),
@@ -355,8 +448,7 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   IconButton(
-                    onPressed: () =>
-                        context.read<SpeechProvider>().resetCardState(),
+                    onPressed: () => context.read<SpeechProvider>().resetCardState(),
                     icon: Icon(
                       Icons.delete_outline,
                       color: AppColors.white,
@@ -382,58 +474,13 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
               ),
             ],
 
-            // Save Button
+            // SAVE BUTTON
             Center(
               child: SizedBox(
                 height: 40.h,
                 width: 120.w,
                 child: ElevatedButton(
-                  onPressed: () async {
-                    final repo = VoiceActionRepository();
-                    final reminder = _getReminder();
-                    final startTime = _eventDateTime ?? DateTime.now();
-
-                    final payload = {
-                      "title": _title.trim().isEmpty
-                          ? "New Item"
-                          : _title.trim(),
-                      "description": _note,
-                      "start_time": startTime.toUtc().toIso8601String(),
-                      if (reminder.isNotEmpty) "reminders": [reminder],
-                    };
-
-                    try {
-                      if (cls.type == 'event') {
-                        await repo.createEvent(
-                          payload
-                            ..["end_time"] = startTime
-                                .add(const Duration(hours: 1))
-                                .toUtc()
-                                .toIso8601String(),
-                        );
-                        await context.read<CalendarProvider>().loadEvents();
-                      } else if (cls.type == 'task') {
-                        await repo.createTask(payload..["duration"] = 60);
-                        await context.read<TaskProvider>().loadTasks();
-                      } else {
-                        await repo.createNote(_note);
-                        await context.read<NotesProvider>().loadNotes();
-                      }
-                      TopSnackBar.show(
-                        context,
-                        message: "Saved successfully!",
-                        backgroundColor: Colors.green[700]!,
-                      );
-                      context.read<SpeechProvider>().resetCardState();
-                    } catch (e) {
-                      TopSnackBar.show(
-                        context,
-                        message: "Error: $e",
-                        backgroundColor: Colors.red[700]!,
-                        duration: const Duration(seconds: 4),
-                      );
-                    }
-                  },
+                  onPressed: _saveToDatabase,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.green,
                     foregroundColor: Colors.white,

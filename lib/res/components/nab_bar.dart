@@ -1,5 +1,3 @@
-// lib/res/components/nab_bar.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -21,8 +19,7 @@ class SmoothNavigationWrapper extends StatefulWidget {
   final Widget? child;
   final int initialIndex;
 
-  const SmoothNavigationWrapper({Key? key, this.child, this.initialIndex = 0})
-    : super(key: key);
+  const SmoothNavigationWrapper({super.key, this.child, this.initialIndex = 0});
 
   @override
   State<SmoothNavigationWrapper> createState() =>

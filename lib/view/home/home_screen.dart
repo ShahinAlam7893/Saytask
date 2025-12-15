@@ -6,10 +6,15 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:saytask/repository/calendar_service.dart';
+import 'package:saytask/repository/notes_service.dart';
 import 'package:saytask/repository/settings_service.dart';
 import 'package:saytask/repository/speech_provider.dart';
+import 'package:saytask/repository/today_task_service.dart';
+import 'package:saytask/repository/voice_action_repository.dart';
 import 'package:saytask/res/color.dart';
 import 'package:saytask/res/components/speak_screen/event_card.dart';
+import 'package:saytask/res/components/top_snackbar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -99,18 +104,16 @@ class _HomeScreenState extends State<HomeScreen>
       setState(() {
         _selectedFileName = result.files.single.name;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('File selected: ${result.files.single.name}'),
-          backgroundColor: Colors.green,
-        ),
+      TopSnackBar.show(
+        context,
+        message: 'File selected: ${result.files.single.name}',
+        backgroundColor: Colors.green[700]!,
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No file selected'),
-          backgroundColor: Colors.red,
-        ),
+      TopSnackBar.show(
+        context,
+        message: 'Cannot start speech recognition',
+        backgroundColor: Colors.red[700]!,
       );
     }
   }
@@ -372,50 +375,85 @@ class _HomeScreenState extends State<HomeScreen>
   // ──────────────────────────────────────────────────────────────
   // DIALOG – uses provider text
   // ──────────────────────────────────────────────────────────────
-  void _showRecordingCompleteDialog(BuildContext context) {
-    final speech = context.read<SpeechProvider>();
 
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierColor: Colors.black.withOpacity(0.5),
-      builder: (context) {
-        return Center(
-          child: Material(
-            color: Colors.transparent,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Align(
-                  alignment: Alignment.topRight,
-                  child: GestureDetector(
-                    onTap: () => Navigator.of(context).pop(),
-                    child: Container(
-                      padding: EdgeInsets.all(6.w),
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.close,
-                        color: Colors.black,
-                        size: 22.sp,
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 8.h),
-                SpeackEventCard(
-                  eventTitle: "Voice Summary",
-                  note: speech.text.trim().isEmpty
-                      ? "No speech detected"
-                      : speech.text.trim(),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+  void _showRecordingCompleteDialog(BuildContext context) {
+    TopSnackBar.show(
+      context,
+      message: "Voice recognized — card appearing...",
+      backgroundColor: AppColors.green,
     );
   }
+  // void _showRecordingCompleteDialog(BuildContext context) {
+  //   final speech = context.read<SpeechProvider>();
+
+  //   showDialog(
+  //     context: context,
+  //     barrierDismissible: true,
+  //     barrierColor: Colors.black.withOpacity(0.5),
+  //     builder: (context) {
+  //       return Center(
+  //         child: Material(
+  //           color: Colors.transparent,
+  //           child: Column(
+  //             mainAxisSize: MainAxisSize.min,
+  //             children: [
+  //               Align(
+  //                 alignment: Alignment.topRight,
+  //                 child: GestureDetector(
+  //                   onTap: () => Navigator.of(context).pop(),
+  //                   child: Container(
+  //                     padding: EdgeInsets.all(6.w),
+  //                     decoration: const BoxDecoration(
+  //                       color: Colors.white,
+  //                       shape: BoxShape.circle,
+  //                     ),
+  //                     child: Icon(
+  //                       Icons.close,
+  //                       color: Colors.black,
+  //                       size: 22.sp,
+  //                     ),
+  //                   ),
+  //                 ),
+  //               ),
+  //               SizedBox(height: 8.h),
+  //               SpeackEventCard(
+  //                 onSave: () async {
+  //                   final cls = speech.lastClassification!;
+
+  //                   try {
+  //                     await VoiceActionRepository().saveVoiceAction(cls);
+
+  //                     if (cls.type == 'task') {
+  //                       context.read<TaskProvider>().loadTasks();
+  //                     } else if (cls.type == 'event') {
+  //                       context.read<CalendarProvider>().loadEvents();
+  //                     } else {
+  //                       context.read<NotesProvider>().loadNotes();
+  //                     }
+
+  //                     ScaffoldMessenger.of(context).showSnackBar(
+  //                       SnackBar(
+  //                         content: Text("${cls.type.toUpperCase()} saved!"),
+  //                         backgroundColor: Colors.green,
+  //                       ),
+  //                     );
+  //                   } catch (e) {
+  //                     ScaffoldMessenger.of(context).showSnackBar(
+  //                       SnackBar(
+  //                         content: Text("Failed: $e"),
+  //                         backgroundColor: Colors.red,
+  //                       ),
+  //                     );
+  //                   } finally {
+  //                     speech.resetCardState();
+  //                   }
+  //                 },
+  //               ),
+  //             ],
+  //           ),
+  //         ),
+  //       );
+  //     },
+  //   );
+  // }
 }

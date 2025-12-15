@@ -1,8 +1,5 @@
-import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
-import 'package:saytask/core/api_endpoints.dart';
 import 'package:saytask/core/jwt_helper.dart';
 import 'package:saytask/model/user_model.dart';
 import 'package:saytask/repository/auth_repository.dart';

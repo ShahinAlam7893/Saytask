@@ -190,7 +190,7 @@ class AuthRepository {
     }
   } catch (e) {
     debugPrint("changePassword() EXCEPTION: $e");
-    rethrow;
+    rethrow;   
   }
 }
 

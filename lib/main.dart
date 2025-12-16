@@ -1,30 +1,33 @@
+// main.dart
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:saytask/repository/notification_service.dart';
 
-import 'package:saytask/repository/calendar_service.dart';
-import 'package:saytask/repository/chat_service.dart';
-import 'package:saytask/repository/settings_service.dart';
-import 'package:saytask/repository/speak_overlay_provider.dart';
-import 'package:saytask/repository/speech_provider.dart';
-import 'package:saytask/repository/today_task_service.dart';
-import 'package:saytask/repository/voice_record_provider_note.dart';
-import 'package:saytask/service/local_storage_service.dart';
+import 'firebase_options.dart';
+import 'repository/calendar_service.dart';
+import 'repository/chat_service.dart';
+import 'repository/settings_service.dart';
+import 'repository/speak_overlay_provider.dart';
+import 'repository/speech_provider.dart';
+import 'repository/today_task_service.dart';
+import 'repository/voice_record_provider_note.dart';
 import 'repository/notes_service.dart';
 import 'repository/plan_service.dart';
-
 import 'view_model/auth_view_model.dart';
 import 'utils/routes/routes.dart';
+import 'service/local_storage_service.dart';
 
-Future<void> main() async {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-final chatViewModel = ChatViewModel();
 
-  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await LocalStorageService.init();
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  await NotificationService().initialize();
 
   runApp(
     MultiProvider(
@@ -35,7 +38,7 @@ final chatViewModel = ChatViewModel();
         ChangeNotifierProvider(create: (_) => NoteDetailsViewModel()),
         ChangeNotifierProvider(create: (_) => VoiceRecordProvider()),
         ChangeNotifierProvider(create: (_) => PlanViewModel()),
-        ChangeNotifierProvider.value(value: chatViewModel),
+        ChangeNotifierProvider(create: (_) => ChatViewModel()),
         ChangeNotifierProvider(create: (_) => SettingsViewModel()),
         ChangeNotifierProvider(create: (_) => SpeakOverlayProvider()),
         ChangeNotifierProvider(create: (_) => SpeechProvider()),
@@ -61,9 +64,7 @@ class MyApp extends StatelessWidget {
           theme: ThemeData(
             brightness: Brightness.dark,
             primaryColor: Colors.tealAccent,
-            textTheme: GoogleFonts.poppinsTextTheme(
-              Theme.of(context).textTheme,
-            ),
+            textTheme: GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme),
             scaffoldBackgroundColor: const Color(0xFF121212),
             appBarTheme: const AppBarTheme(
               backgroundColor: Colors.transparent,

@@ -1,9 +1,15 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:saytask/core/jwt_helper.dart';
 import 'package:saytask/model/user_model.dart';
 import 'package:saytask/repository/auth_repository.dart';
+import 'package:saytask/repository/notification_service.dart';
 import 'package:saytask/service/local_storage_service.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 class AuthViewModel extends ChangeNotifier {
   final AuthRepository _repository = AuthRepository();
@@ -94,6 +100,7 @@ class AuthViewModel extends ChangeNotifier {
       if (token != null) {
         _accessToken = token;
         currentUser = user;
+        await NotificationService.sendFcmTokenToBackend();
         notifyListeners();
         return true;
       }
@@ -241,6 +248,65 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
+  final _auth = FirebaseAuth.instance;
+  final _googleSignIn = GoogleSignIn();
+
+
+
+  Future<void> signInWithGoogle() async {
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+
+      if (googleUser == null) {
+        print("Google Sign-In cancelled by user.");
+        return;
+      }
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final UserCredential userCredential = await _auth.signInWithCredential(
+        credential,
+      );
+      final String? idToken = await userCredential.user?.getIdToken();
+
+      print("🔥 Google Firebase ID Token: $idToken");
+
+      // send to your backend
+    } catch (e) {
+      print("❌ Google Sign-In Error: $e");
+      return;
+    }
+  }
+
+  Future<void> googleSignOut() async {
+    await _auth.signOut();
+    await _googleSignIn.signOut();
+  }
+
+  Future<void> appleLogin() async {
+    final credential = await SignInWithApple.getAppleIDCredential(
+      scopes: [
+        AppleIDAuthorizationScopes.email,
+        AppleIDAuthorizationScopes.fullName,
+      ],
+    );
+
+    final oauthCredential = OAuthProvider("apple.com").credential(
+      idToken: credential.identityToken,
+      accessToken: credential.authorizationCode,
+    );
+
+    final userCredential = await FirebaseAuth.instance.signInWithCredential(
+      oauthCredential,
+    );
+
+    print(credential.identityToken);
+  }
   Future<bool> changePassword({
     required String currentPassword,
     required String newPassword,

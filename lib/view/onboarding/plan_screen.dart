@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:saytask/model/plan_model.dart';
 import 'package:saytask/res/color.dart';
 import 'package:saytask/repository/plan_service.dart';
+import 'package:saytask/res/components/top_snackbar.dart';
 import 'package:saytask/view/onboarding/payment_screen.dart';
 
 class PlanScreen extends StatelessWidget {
@@ -79,23 +80,28 @@ class PlanScreen extends StatelessWidget {
               );
             }
 
-      
             print("📋 Total plans loaded: ${viewModel.plans.length}");
             for (var p in viewModel.plans) {
-              print("  - ID: ${p.id}, Name: ${p.name}, Monthly: \$${p.monthlyPrice.toStringAsFixed(2)}, Annual: \$${p.annualPrice.toStringAsFixed(2)}");
+              print(
+                "  - ID: ${p.id}, Name: ${p.name}, Monthly: \$${p.monthlyPrice.toStringAsFixed(2)}, Annual: \$${p.annualPrice.toStringAsFixed(2)}",
+              );
             }
-            
+
             final freePlan = viewModel.plans.firstWhere(
               (p) => p.name.toLowerCase() == 'free',
               orElse: () => viewModel.plans.first,
             );
             final basicPlan = viewModel.plans.firstWhere(
               (p) => p.name.toLowerCase() == 'basic',
-              orElse: () => viewModel.plans.length > 1 ? viewModel.plans[1] : viewModel.plans.first,
+              orElse: () => viewModel.plans.length > 1
+                  ? viewModel.plans[1]
+                  : viewModel.plans.first,
             );
             final premiumPlan = viewModel.plans.firstWhere(
               (p) => p.name.toLowerCase() == 'premium',
-              orElse: () => viewModel.plans.length > 2 ? viewModel.plans[2] : viewModel.plans.first,
+              orElse: () => viewModel.plans.length > 2
+                  ? viewModel.plans[2]
+                  : viewModel.plans.first,
             );
 
             return SingleChildScrollView(
@@ -419,16 +425,17 @@ class PlanScreen extends StatelessWidget {
                       showDialog(
                         context: context,
                         barrierDismissible: false,
-                        builder: (ctx) => Center(
-                          child: CircularProgressIndicator(),
-                        ),
+                        builder: (ctx) =>
+                            Center(child: CircularProgressIndicator()),
                       );
 
                       try {
                         print("🔍 Selected Plan ID: ${plan.id}");
                         print("🔍 Selected Plan Name: ${plan.name}");
-                        print("🔍 Billing Interval: ${viewModel.isMonthly ? 'month' : 'year'}");
-                        
+                        print(
+                          "🔍 Billing Interval: ${viewModel.isMonthly ? 'month' : 'year'}",
+                        );
+
                         // Validate plan ID before checkout
                         if (plan.id.isEmpty) {
                           Navigator.of(context).pop();
@@ -442,7 +449,9 @@ class PlanScreen extends StatelessWidget {
                         }
 
                         // Get checkout URL
-                        final checkoutUrl = await viewModel.createCheckout(plan.id);
+                        final checkoutUrl = await viewModel.createCheckout(
+                          plan.id,
+                        );
 
                         // Close loading dialog
                         Navigator.of(context).pop();
@@ -451,26 +460,33 @@ class PlanScreen extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => CheckoutPage(
-                                checkoutUrl: checkoutUrl,
-                              ),
+                              builder: (context) =>
+                                  CheckoutPage(checkoutUrl: checkoutUrl),
                             ),
                           );
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Failed to create checkout session'),
-                              backgroundColor: Colors.red,
-                            ),
+                          TopSnackBar.show(
+                            context,
+                            message: 'Failed to create checkout session',
+                            backgroundColor: Colors.red,
                           );
                         }
                       } catch (e) {
                         Navigator.of(context).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Error: ${e.toString()}'),
-                            backgroundColor: Colors.red,
-                          ),
+
+                        // Extract the error message from the exception
+                        String errorMessage = e.toString();
+                        // Remove "Exception: " prefix if it exists
+                        if (errorMessage.startsWith('Exception: ')) {
+                          errorMessage = errorMessage.substring(
+                            'Exception: '.length,
+                          );
+                        }
+
+                        TopSnackBar.show(
+                          context,
+                          message: errorMessage,
+                          backgroundColor: Colors.red,
                         );
                       }
                     },
@@ -478,8 +494,8 @@ class PlanScreen extends StatelessWidget {
                       backgroundColor: isBestValue
                           ? const Color(0xFFFFC107)
                           : isPopular
-                              ? const Color(0xFF00A86B)
-                              : AppColors.white,
+                          ? const Color(0xFF00A86B)
+                          : AppColors.white,
                       padding: EdgeInsets.symmetric(vertical: 12.h),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14.r),

@@ -1,52 +1,67 @@
 import 'package:flutter/material.dart';
+import 'package:saytask/res/components/top_snackbar.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:go_router/go_router.dart';
 
-
-class CheckoutPage extends StatefulWidget {
+class CheckoutPage extends StatelessWidget {
   final String checkoutUrl;
 
   const CheckoutPage({super.key, required this.checkoutUrl});
 
   @override
-  State<CheckoutPage> createState() => _CheckoutPageState();
-}
-
-class _CheckoutPageState extends State<CheckoutPage> {
-  bool isLoading = true;
-
-  late final WebViewController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = WebViewController()
+  Widget build(BuildContext context) {
+    final controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(
         NavigationDelegate(
-          onPageStarted: (_) => setState(() => isLoading = true),
-          onPageFinished: (_) => setState(() => isLoading = false),
+          onNavigationRequest: (request) {
+            if (request.url.contains('/success')) {
+              _handlePaymentSuccess(context, request.url);
+              return NavigationDecision.prevent;
+            }
+            if (request.url.contains('/cancel')) {
+              Navigator.pop(context);
+              TopSnackBar.show(
+        context,
+        message: "Payment cancelled",
+        backgroundColor: Colors.red,
+      );
+              return NavigationDecision.prevent;
+            }
+
+            return NavigationDecision.navigate;
+          },
         ),
       )
-      ..loadRequest(Uri.parse(widget.checkoutUrl));
-  }
+      ..loadRequest(Uri.parse(checkoutUrl));
 
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Checkout'),
         backgroundColor: Colors.blueAccent,
       ),
-      body: Stack(
-        children: [
-          WebViewWidget(controller: _controller),
-
-          if (isLoading)
-            const Center(
-              child: CircularProgressIndicator(),
-            ),
-        ],
-      ),
+      body: WebViewWidget(controller: controller),
     );
+  }
+
+  void _handlePaymentSuccess(BuildContext context, String url) {
+    final uri = Uri.parse(url);
+    final sessionId = uri.queryParameters['session_id'];
+
+    debugPrint('✅ PAYMENT SUCCESS');
+    debugPrint('🔑 Session ID: $sessionId');
+
+    Navigator.of(context).pop();
+
+    context.go('/home');
+
+    Future.delayed(const Duration(milliseconds: 300), () {
+      TopSnackBar.show(
+        context,
+        message: "🎉 Subscription activated successfully!",
+        backgroundColor: Colors.green,
+      );
+      
+    });
   }
 }

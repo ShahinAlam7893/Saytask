@@ -10,7 +10,7 @@ SayTask is AI based Flutter mobile app that helps users manage tasks, notes, eve
 - Notes (create, edit, details)
 - Events with calendar integration and event editing
 - Chat interface and bot integration
-- Voice actions: speech-to-text, voice recording, overlays
+- Voice actions: speech-to-text, voice recording, overlayspu
 - Settings, profile, and account management
 - Dark-themed Material UI with responsive scaling
 

@@ -1,13 +1,13 @@
-// lib/res/components/nab_bar.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:saytask/repository/calendar_service.dart';
 import 'package:saytask/repository/notes_service.dart';
 import 'package:saytask/repository/speech_provider.dart';
 import 'package:saytask/repository/today_task_service.dart';
 import 'package:saytask/repository/voice_action_repository.dart';
+import 'package:saytask/res/components/top_snackbar.dart';
 import 'package:saytask/view/home/home_screen.dart';
 import 'package:saytask/view/today/today_screen.dart';
 import 'package:saytask/view/calendar/calendar_screen.dart';
@@ -19,14 +19,11 @@ class SmoothNavigationWrapper extends StatefulWidget {
   final Widget? child;
   final int initialIndex;
 
-  const SmoothNavigationWrapper({
-    Key? key,
-    this.child,
-    this.initialIndex = 0,
-  }) : super(key: key);
+  const SmoothNavigationWrapper({super.key, this.child, this.initialIndex = 0});
 
   @override
-  State<SmoothNavigationWrapper> createState() => _SmoothNavigationWrapperState();
+  State<SmoothNavigationWrapper> createState() =>
+      _SmoothNavigationWrapperState();
 }
 
 class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
@@ -35,18 +32,13 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
   late ValueNotifier<bool> _isRecordingNotifier;
 
   List<Widget> get _pages => const [
-        HomeScreen(),
-        TodayScreen(),
-        CalendarScreen(),
-        NotesScreen(),
-      ];
-
-  final List<String> _routes = [
-    '/home',
-    '/today',
-    '/calendar',
-    '/notes',
+    HomeScreen(),
+    TodayScreen(),
+    CalendarScreen(),
+    NotesScreen(),
   ];
+
+  final List<String> _routes = ['/home', '/today', '/calendar', '/notes'];
 
   @override
   void initState() {
@@ -112,7 +104,9 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
     final isSinglePage = widget.child != null;
 
     return Theme(
-      data: Theme.of(context).copyWith(scaffoldBackgroundColor: AppColors.white),
+      data: Theme.of(
+        context,
+      ).copyWith(scaffoldBackgroundColor: AppColors.white),
       child: Scaffold(
         body: Stack(
           children: [
@@ -140,7 +134,8 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
             // VOICE CARD + SAVE TO BACKEND
             Consumer<SpeechProvider>(
               builder: (context, speech, child) {
-                if (!speech.shouldShowCard || speech.lastClassification == null) {
+                if (!speech.shouldShowCard ||
+                    speech.lastClassification == null) {
                   return const SizedBox.shrink();
                 }
 
@@ -168,44 +163,46 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
                                       color: Colors.white,
                                       shape: BoxShape.circle,
                                     ),
-                                    child: const Icon(Icons.close, color: Colors.black),
+                                    child: const Icon(
+                                      Icons.close,
+                                      color: Colors.black,
+                                    ),
                                   ),
                                 ),
                               ),
 
                               SpeackEventCard(
-                                eventTitle: cls.type == 'note'
-                                    ? 'New Note'
-                                    : (cls.title.isEmpty ? 'New Item' : cls.title),
-                                note: cls.description ?? cls.rawText,
-                                initialReminder: cls.type == 'note' ? "None" : (cls.reminder),
-                                initialCallMe: cls.type == 'note' ? false : cls.callMe,
                                 onSave: () async {
-                                  final repo = VoiceActionRepository();
+                                  final cls = speech.lastClassification!;
 
                                   try {
-                                    await repo.saveVoiceAction(cls);
+                                    await VoiceActionRepository()
+                                        .saveVoiceAction(cls);
 
-                                    // Refresh correct screen
                                     if (cls.type == 'task') {
                                       context.read<TaskProvider>().loadTasks();
-                                    } else if (cls.type == 'note') {
+                                    } else if (cls.type == 'event') {
+                                      context
+                                          .read<CalendarProvider>()
+                                          .loadEvents();
+                                    } else {
                                       context.read<NotesProvider>().loadNotes();
                                     }
 
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text("${cls.type.toUpperCase()} saved!"),
-                                        backgroundColor: Colors.green,
-                                        behavior: SnackBarBehavior.floating,
-                                      ),
+                                    TopSnackBar.show(
+                                      context,
+                                      message:
+                                          "${cls.type.toUpperCase()} saved successfully!",
+                                      backgroundColor: Colors.green[700]!,
+                                      duration: const Duration(seconds: 3),
                                     );
                                   } catch (e) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text("Failed to save: $e"),
-                                        backgroundColor: Colors.red,
-                                      ),
+                                    // ← REPLACED
+                                    TopSnackBar.show(
+                                      context,
+                                      message: "Failed to save: $e",
+                                      backgroundColor: Colors.red[700]!,
+                                      duration: const Duration(seconds: 4),
                                     );
                                   } finally {
                                     speech.resetCardState();
@@ -237,7 +234,7 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
             color: Colors.black.withOpacity(0.1),
             blurRadius: 10,
             offset: const Offset(0, -2),
-          )
+          ),
         ],
       ),
       child: SafeArea(
@@ -247,9 +244,19 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildNavItem(0, Icons.home_outlined, Icons.home, 'Home'),
-              _buildNavItem(1, Icons.access_time_rounded, Icons.access_time_rounded, 'Today'),
+              _buildNavItem(
+                1,
+                Icons.access_time_rounded,
+                Icons.access_time_rounded,
+                'Today',
+              ),
               _buildNavItem(2, Icons.mic, Icons.mic, 'Speak', isMic: true),
-              _buildNavItem(3, Icons.event_note_outlined, Icons.event_note, 'Calendar'),
+              _buildNavItem(
+                3,
+                Icons.event_note_outlined,
+                Icons.event_note,
+                'Calendar',
+              ),
               _buildNavItem(4, Icons.edit, Icons.edit, 'Notes'),
             ],
           ),
@@ -279,7 +286,8 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
                 color: isRecording ? Colors.red : AppColors.green,
                 boxShadow: [
                   BoxShadow(
-                    color: (isRecording ? Colors.red : AppColors.green).withOpacity(0.3),
+                    color: (isRecording ? Colors.red : AppColors.green)
+                        .withOpacity(0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),

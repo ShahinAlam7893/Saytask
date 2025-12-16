@@ -8,7 +8,7 @@ class PlanService {
   static const String baseUrl = Urls.baseUrl;
 
   Future<String?> _getToken() async {
-    await LocalStorageService.init(); 
+    await LocalStorageService.init();
     return LocalStorageService.token;
   }
 
@@ -83,8 +83,13 @@ class PlanService {
       print("✅ CHECKOUT SUCCESS — redirecting to payment link");
       return checkoutUrl;
     } else {
+      final decoded = json.decode(res.body);
+      // Change from "message" to "detail" to match your API response
+      final message =
+          decoded["detail"] ?? decoded["message"] ?? "Unknown error";
+
       print("❌ Checkout failed: ${res.statusCode} - ${res.body}");
-      throw Exception("Checkout failed: ${res.statusCode} ${res.body}");
+      throw Exception(message);
     }
   }
 }

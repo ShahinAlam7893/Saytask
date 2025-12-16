@@ -53,7 +53,7 @@ class CalendarProvider extends ChangeNotifier {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
-
+    Future.microtask(() => notifyListeners());
     try {
       debugPrint("Fetching events from API...");
       final events = await ApiService().fetchEvents();

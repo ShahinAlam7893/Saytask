@@ -241,7 +241,7 @@ Future<UserModel> signInWithApple({required String identity_token}) async {
     }
   } catch (e) {
     debugPrint("changePassword() EXCEPTION: $e");
-    rethrow;
+    rethrow;   
   }
 }
 

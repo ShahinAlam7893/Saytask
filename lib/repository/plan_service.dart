@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:saytask/model/plan_model.dart';
 import 'package:saytask/repository/plan_repository.dart';
 
-
 class PlanViewModel extends ChangeNotifier {
   final PlanService _repository = PlanService();
 
@@ -10,7 +9,7 @@ class PlanViewModel extends ChangeNotifier {
   bool isLoading = false;
   String? errorMessage;
 
-  bool isMonthly = true;
+  bool isMonthly = false;
 
   void togglePlanType(bool monthly) {
     isMonthly = monthly;
@@ -37,11 +36,12 @@ class PlanViewModel extends ChangeNotifier {
       final billingInterval = isMonthly ? "month" : "year";
       return await _repository.checkout(planId, billingInterval);
     } catch (e) {
-      return null;
+      rethrow;
+      // return null;
     }
   }
 
   double getPrice(Plan plan) {
-    return isMonthly ? plan.monthlyPrice : plan.annualPrice/12;
+    return isMonthly ? plan.monthlyPrice : plan.annualPrice / 12;
   }
 }

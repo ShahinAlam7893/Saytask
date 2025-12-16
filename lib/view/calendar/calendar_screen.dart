@@ -20,12 +20,10 @@ class CalendarScreen extends StatefulWidget {
 
 class _CalendarScreenState extends State<CalendarScreen> {
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<CalendarProvider>().loadEvents();
-    });
-  }
+void didChangeDependencies() {
+  super.didChangeDependencies();
+  context.read<CalendarProvider>().loadEvents();
+}
 
   @override
   Widget build(BuildContext context) {

@@ -23,7 +23,7 @@ class ApiService {
     final token = await _getToken();
     if (token == null) throw Exception("No token");
 
-    final url = Uri.parse('${Urls.baseUrl}/actions/events/');
+    final url = Uri.parse('${Urls.baseUrl}actions/events/');
     debugPrint("Calling API: $url");
 
     final response = await http.get(

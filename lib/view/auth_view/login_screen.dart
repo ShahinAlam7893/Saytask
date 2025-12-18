@@ -281,7 +281,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     onPressed: () async{
-                      await authVM.appleLogin();
+                      // await authVM.appleLogin();
                     },
                     icon: SvgPicture.asset(
                       'assets/images/ri_apple-line.svg',

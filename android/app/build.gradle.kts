@@ -31,7 +31,7 @@ android {
 
     defaultConfig {
         applicationId = "com.app.saytask"
-        minSdk = flutter.minSdkVersion
+        minSdk = 23
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -47,10 +47,14 @@ android {
     }
 
     buildTypes {
-        release {
+    release {
+        if (keystorePropertiesFile.exists()) {
             signingConfig = signingConfigs.getByName("release")
         }
+       
     }
+}
+
 }
 
 dependencies {

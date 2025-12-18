@@ -24,7 +24,7 @@ class _EventEditScreenState extends State<EventEditScreen> {
   late TextEditingController _locationController;
   late DateTime _selectedDateTime;
 
-  String _currentTimeText = "Loading..."; 
+  String _currentTimeText = "Loading...";
 
   @override
   void initState() {
@@ -40,8 +40,6 @@ class _EventEditScreenState extends State<EventEditScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Safe: context is ready here
-    // ignore: unnecessary_null_comparison
     _currentTimeText = _selectedDateTime != null
         ? TimeOfDay.fromDateTime(_selectedDateTime).format(context)
         : "No time";
@@ -75,16 +73,50 @@ class _EventEditScreenState extends State<EventEditScreen> {
     }
   }
 
+  Future<void> _pickDate(CalendarProvider provider) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDateTime,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+
+    if (picked != null && mounted) {
+      setState(() {
+        _selectedDateTime = DateTime(
+          picked.year,
+          picked.month,
+          picked.day,
+          _selectedDateTime.hour,
+          _selectedDateTime.minute,
+        );
+      });
+      _updateEvent(provider);
+    }
+  }
+
   Future<String?> _pickReminder(CalendarProvider provider) async {
-    final options = ['5 min before', '10 min before', '30 min before', '1 hr before', '2 hr before'];
+    final options = [
+      '5 min before',
+      '10 min before',
+      '30 min before',
+      '1 hr before',
+      '2 hr before',
+    ];
     final currentMinutes = widget.event.reminderMinutes;
 
     return showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r), side: const BorderSide(color: Colors.grey)),
-        title: const Text('Add Reminder', style: TextStyle(fontWeight: FontWeight.bold)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12.r),
+          side: const BorderSide(color: Colors.grey),
+        ),
+        title: const Text(
+          'Add Reminder',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         content: SizedBox(
           width: double.maxFinite,
           child: ListView.builder(
@@ -94,7 +126,12 @@ class _EventEditScreenState extends State<EventEditScreen> {
               final minutes = int.parse(options[i].split(' ')[0]);
               final isSelected = currentMinutes == minutes;
               return ListTile(
-                title: Text(options[i], style: TextStyle(color: isSelected ? Colors.grey : Colors.black)),
+                title: Text(
+                  options[i],
+                  style: TextStyle(
+                    color: isSelected ? Colors.grey : Colors.black,
+                  ),
+                ),
                 enabled: !isSelected,
                 onTap: () => Navigator.pop(ctx, options[i]),
               );
@@ -102,7 +139,10 @@ class _EventEditScreenState extends State<EventEditScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
         ],
       ),
     );
@@ -115,7 +155,7 @@ class _EventEditScreenState extends State<EventEditScreen> {
       locationAddress: _locationController.text,
       eventDateTime: _selectedDateTime,
     );
-    provider.updateEvent(widget.event, updated);
+    provider.updateItem(widget.event, updated); // ← Changed to updateItem
   }
 
   @override
@@ -134,17 +174,27 @@ class _EventEditScreenState extends State<EventEditScreen> {
                 _titleController.text != widget.event.title ||
                 _descriptionController.text != widget.event.description ||
                 _locationController.text != widget.event.locationAddress ||
-                !_selectedDateTime.isAtSameMomentAs(widget.event.eventDateTime ?? DateTime.now());
+                !_selectedDateTime.isAtSameMomentAs(
+                  widget.event.eventDateTime ?? DateTime.now(),
+                );
 
             if (hasChanges) {
               final save = await showDialog<bool>(
                 context: context,
                 builder: (ctx) => AlertDialog(
                   title: const Text('Unsaved Changes'),
-                  content: const Text('Do you want to save changes before leaving?'),
+                  content: const Text(
+                    'Do you want to save changes before leaving?',
+                  ),
                   actions: [
-                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Discard')),
-                    TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Discard'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text('Save'),
+                    ),
                   ],
                 ),
               );
@@ -153,7 +203,10 @@ class _EventEditScreenState extends State<EventEditScreen> {
             if (mounted) context.pop();
           },
         ),
-        title: const Text('Edit Event', style: TextStyle(color: AppColors.black, fontFamily: 'Poppins')),
+        title: const Text(
+          'Edit Event',
+          style: TextStyle(color: AppColors.black, fontFamily: 'Poppins'),
+        ),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -166,8 +219,17 @@ class _EventEditScreenState extends State<EventEditScreen> {
               controller: _titleController,
               decoration: InputDecoration(
                 hintText: 'Event Title',
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8.r), borderSide: const BorderSide(color: Colors.grey, width: 1.5)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8.r), borderSide: const BorderSide(color: AppColors.green, width: 2.0)),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8.r),
+                  borderSide: const BorderSide(color: Colors.grey, width: 1.5),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8.r),
+                  borderSide: const BorderSide(
+                    color: AppColors.green,
+                    width: 2.0,
+                  ),
+                ),
               ),
               style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
               onChanged: (_) => _updateEvent(provider),
@@ -181,9 +243,21 @@ class _EventEditScreenState extends State<EventEditScreen> {
               decoration: InputDecoration(
                 hintText: 'Description',
                 hintStyle: TextStyle(color: Colors.grey[600]),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10.r), borderSide: const BorderSide(color: Colors.grey, width: 1.5)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10.r), borderSide: const BorderSide(color: AppColors.green, width: 2.0)),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.r),
+                  borderSide: const BorderSide(color: Colors.grey, width: 1.5),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.r),
+                  borderSide: const BorderSide(
+                    color: AppColors.green,
+                    width: 2.0,
+                  ),
+                ),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 12.w,
+                  vertical: 10.h,
+                ),
               ),
               cursorColor: AppColors.green,
               style: TextStyle(fontSize: 14.sp),
@@ -197,9 +271,21 @@ class _EventEditScreenState extends State<EventEditScreen> {
               decoration: InputDecoration(
                 hintText: 'Location',
                 hintStyle: TextStyle(color: Colors.grey[600]),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10.r), borderSide: const BorderSide(color: Colors.grey, width: 1.5)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10.r), borderSide: const BorderSide(color: AppColors.green, width: 2.0)),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.r),
+                  borderSide: const BorderSide(color: Colors.grey, width: 1.5),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.r),
+                  borderSide: const BorderSide(
+                    color: AppColors.green,
+                    width: 2.0,
+                  ),
+                ),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 12.w,
+                  vertical: 10.h,
+                ),
               ),
               cursorColor: AppColors.green,
               style: TextStyle(fontSize: 14.sp),
@@ -212,7 +298,13 @@ class _EventEditScreenState extends State<EventEditScreen> {
               children: [
                 const Icon(Icons.schedule, color: AppColors.green),
                 SizedBox(width: 8.w),
-                Text('Schedule', style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold)),
+                Text(
+                  'Schedule',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
             SizedBox(height: 8.h),
@@ -222,15 +314,42 @@ class _EventEditScreenState extends State<EventEditScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Date', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600)),
+                      Text(
+                        'Date',
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                       SizedBox(height: 6.h),
-                      TextField(
-                        readOnly: true,
-                        decoration: InputDecoration(
-                          hintText: DateFormat('MMMM d, yyyy').format(_selectedDateTime),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24.r), borderSide: const BorderSide(color: Colors.grey, width: 1.5)),
-                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24.r), borderSide: const BorderSide(color: AppColors.green, width: 2.0)),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                      GestureDetector(
+                        onTap: () => _pickDate(provider),
+                        child: AbsorbPointer(
+                          child: TextField(
+                            decoration: InputDecoration(
+                              hintText: DateFormat(
+                                'MMMM d, yyyy',
+                              ).format(_selectedDateTime),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24.r),
+                                borderSide: const BorderSide(
+                                  color: Colors.grey,
+                                  width: 1.5,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24.r),
+                                borderSide: const BorderSide(
+                                  color: AppColors.green,
+                                  width: 2.0,
+                                ),
+                              ),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12.w,
+                                vertical: 10.h,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -241,7 +360,13 @@ class _EventEditScreenState extends State<EventEditScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Time', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600)),
+                      Text(
+                        'Time',
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                       SizedBox(height: 6.h),
                       GestureDetector(
                         onTap: () => _pickTime(provider),
@@ -249,9 +374,24 @@ class _EventEditScreenState extends State<EventEditScreen> {
                           child: TextField(
                             decoration: InputDecoration(
                               hintText: _currentTimeText,
-                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24.r), borderSide: const BorderSide(color: Colors.grey, width: 1.5)),
-                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24.r), borderSide: const BorderSide(color: AppColors.green, width: 2.0)),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24.r),
+                                borderSide: const BorderSide(
+                                  color: Colors.grey,
+                                  width: 1.5,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24.r),
+                                borderSide: const BorderSide(
+                                  color: AppColors.green,
+                                  width: 2.0,
+                                ),
+                              ),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12.w,
+                                vertical: 10.h,
+                              ),
                             ),
                           ),
                         ),
@@ -268,16 +408,29 @@ class _EventEditScreenState extends State<EventEditScreen> {
               children: [
                 const Icon(Icons.notifications_none, color: AppColors.green),
                 SizedBox(width: 8.w),
-                Text('Reminders', style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold)),
+                Text(
+                  'Reminders',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
             SizedBox(height: 8.h),
             Consumer<CalendarProvider>(
               builder: (context, provider, _) {
-                final currentEvent = provider.getEventsForDate(_selectedDateTime).firstWhere(
-                  (e) => e.id == widget.event.id,
-                  orElse: () => widget.event,
+                // Safely find current event from mixed list
+                final dateKey = DateTime.utc(
+                  _selectedDateTime.year,
+                  _selectedDateTime.month,
+                  _selectedDateTime.day,
                 );
+                final itemsOnDay = provider.getItemsForDate(dateKey);
+                final currentEvent = itemsOnDay.firstWhere(
+                  (item) => item is Event && item.id == widget.event.id,
+                  orElse: () => widget.event,
+                ) as Event;
 
                 final reminders = currentEvent.reminderMinutes > 0
                     ? ['${currentEvent.reminderMinutes} min before']
@@ -287,12 +440,22 @@ class _EventEditScreenState extends State<EventEditScreen> {
                   width: double.infinity,
                   padding: EdgeInsets.all(12.w),
                   child: reminders.isEmpty
-                      ? Text('No reminders set', style: TextStyle(fontSize: 14.sp, color: Colors.grey[600], fontStyle: FontStyle.italic))
+                      ? Text(
+                          'No reminders set',
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: Colors.grey[600],
+                            fontStyle: FontStyle.italic,
+                          ),
+                        )
                       : Column(
                           children: reminders.map((r) {
                             return Container(
                               margin: EdgeInsets.only(bottom: 8.h),
-                              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 10.w,
+                                vertical: 6.h,
+                              ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFFBFBFB),
                                 borderRadius: BorderRadius.circular(32.r),
@@ -302,28 +465,51 @@ class _EventEditScreenState extends State<EventEditScreen> {
                                 children: [
                                   SizedBox(width: 8.w),
                                   Expanded(
-                                    child: Text(r, style: TextStyle(fontSize: 14.sp, color: AppColors.black, fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+                                    child: Text(
+                                      r,
+                                      style: TextStyle(
+                                        fontSize: 14.sp,
+                                        color: AppColors.black,
+                                        fontFamily: 'Poppins',
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
                                   ),
                                   Container(
                                     decoration: BoxDecoration(
                                       color: const Color(0xFFEF9937),
-                                      border: Border.all(color: Colors.grey.shade400, width: 1),
+                                      border: Border.all(
+                                        color: Colors.grey.shade400,
+                                        width: 1,
+                                      ),
                                       borderRadius: BorderRadius.circular(12.r),
                                     ),
                                     child: IconButton(
-                                      icon: const Icon(Icons.notifications_none, color: AppColors.white),
+                                      icon: const Icon(
+                                        Icons.notifications_none,
+                                        color: AppColors.white,
+                                      ),
                                       onPressed: () {},
                                     ),
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.wifi_calling_3_outlined, color: AppColors.green),
+                                    icon: const Icon(
+                                      Icons.wifi_calling_3_outlined,
+                                      color: AppColors.green,
+                                    ),
                                     onPressed: () {},
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.close, color: Colors.red),
+                                    icon: const Icon(
+                                      Icons.close,
+                                      color: Colors.red,
+                                    ),
                                     onPressed: () {
-                                      final cleared = currentEvent.copyWith(reminderMinutes: 0, callMe: false);
-                                      provider.updateEvent(currentEvent, cleared);
+                                      final cleared = currentEvent.copyWith(
+                                        reminderMinutes: 0,
+                                        callMe: false,
+                                      );
+                                      provider.updateItem(currentEvent, cleared); // ← Changed to updateItem
                                     },
                                   ),
                                 ],
@@ -342,16 +528,28 @@ class _EventEditScreenState extends State<EventEditScreen> {
                 final reminder = await _pickReminder(provider);
                 if (reminder != null) {
                   final minutes = int.parse(reminder.split(' ')[0]);
-                  final updated = widget.event.copyWith(reminderMinutes: minutes);
-                  provider.updateEvent(widget.event, updated);
+                  final updated = widget.event.copyWith(
+                    reminderMinutes: minutes,
+                  );
+                  provider.updateItem(widget.event, updated); // ← Changed to updateItem
                 }
               },
               icon: const Icon(Icons.add, color: AppColors.black),
-              label: Text('Add Reminder', style: TextStyle(fontSize: 14.sp, color: AppColors.black, fontWeight: FontWeight.w600)),
+              label: Text(
+                'Add Reminder',
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  color: AppColors.black,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               style: TextButton.styleFrom(
                 backgroundColor: AppColors.white,
                 shape: const StadiumBorder(),
-                side: BorderSide(color: AppColors.secondaryTextColor, width: 1.0),
+                side: BorderSide(
+                  color: AppColors.secondaryTextColor,
+                  width: 1.0,
+                ),
                 padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
               ),
             ),
@@ -366,26 +564,48 @@ class _EventEditScreenState extends State<EventEditScreen> {
                     final confirm = await showDialog<bool>(
                       context: context,
                       builder: (ctx) => AlertDialog(
+                        backgroundColor: Colors.white,
                         title: const Text('Delete Event?'),
                         content: const Text('This action cannot be undone.'),
                         actions: [
-                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete')),
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx, false),
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(color: AppColors.black),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx, true),
+                            child: const Text(
+                              'Delete',
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ),
                         ],
                       ),
                     );
                     if (confirm == true) {
-                      provider.removeEvent(widget.event);
+                      provider.removeItem(widget.event); // ← Changed to removeItem
                       if (mounted) context.pop();
                     }
                   },
                   icon: const Icon(Icons.delete, color: AppColors.red),
-                  label: Text('Delete', style: TextStyle(fontSize: 14.sp, color: AppColors.black)),
+                  label: Text(
+                    'Delete',
+                    style: TextStyle(fontSize: 14.sp, color: AppColors.black),
+                  ),
                   style: TextButton.styleFrom(
                     backgroundColor: AppColors.white,
                     shape: const StadiumBorder(),
-                    side: BorderSide(color: AppColors.secondaryTextColor, width: 1.0),
-                    padding: EdgeInsets.symmetric(horizontal: 50.w, vertical: 8.h),
+                    side: BorderSide(
+                      color: AppColors.secondaryTextColor,
+                      width: 1.0,
+                    ),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 50.w,
+                      vertical: 8.h,
+                    ),
                   ),
                 ),
                 TextButton.icon(
@@ -394,12 +614,21 @@ class _EventEditScreenState extends State<EventEditScreen> {
                     context.pop();
                   },
                   icon: const Icon(Icons.done, color: AppColors.green),
-                  label: Text('Save', style: TextStyle(fontSize: 14.sp, color: AppColors.black)),
+                  label: Text(
+                    'Save',
+                    style: TextStyle(fontSize: 14.sp, color: AppColors.black),
+                  ),
                   style: TextButton.styleFrom(
                     backgroundColor: AppColors.white,
                     shape: const StadiumBorder(),
-                    side: BorderSide(color: AppColors.secondaryTextColor, width: 1.0),
-                    padding: EdgeInsets.symmetric(horizontal: 50.w, vertical: 8.h),
+                    side: BorderSide(
+                      color: AppColors.secondaryTextColor,
+                      width: 1.0,
+                    ),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 50.w,
+                      vertical: 8.h,
+                    ),
                   ),
                 ),
               ],

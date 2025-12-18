@@ -8,20 +8,21 @@ class Event {
   final String title;
   final String description;
   final String locationAddress;
-  final DateTime? eventDateTime; 
+  DateTime? eventDateTime; 
   final int reminderMinutes;
   final bool callMe;
+  final bool isCompleted;
 
   Event({
     String? id,
     required this.title,
     this.description = '',
     this.locationAddress = '',
-    DateTime? eventDateTime,
+    this.eventDateTime,
     this.reminderMinutes = 0,
     this.callMe = false,
-  })  : id = id ?? const Uuid().v4(),
-        eventDateTime = eventDateTime;
+    this.isCompleted = false,
+  })  : id = id ?? const Uuid().v4();
 
   // ────────────────────── GETTERS (Local Time) ──────────────────────
   DateTime? get localDateTime => eventDateTime;
@@ -99,6 +100,7 @@ if (json['event_datetime'] != null && json['event_datetime'] != 'null') {
     DateTime? eventDateTime,
     int? reminderMinutes,
     bool? callMe,
+    bool? isCompleted,
   }) {
     return Event(
       id: id ?? this.id,
@@ -108,6 +110,7 @@ if (json['event_datetime'] != null && json['event_datetime'] != 'null') {
       eventDateTime: eventDateTime ?? this.eventDateTime,
       reminderMinutes: reminderMinutes ?? this.reminderMinutes,
       callMe: callMe ?? this.callMe,
+      isCompleted: isCompleted ?? this.isCompleted,
     );
   }
 

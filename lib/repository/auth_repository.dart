@@ -305,4 +305,25 @@ Future<UserModel> signInWithApple({required String identity_token}) async {
 
     throw _handleError(res, "Failed to update profile");
   }
+
+
+  Future<void> updateProfileNotifications(bool enabled) async {
+  final token = LocalStorageService.token;
+  if (token == null) throw Exception("No authentication token");
+
+  final response = await http.patch(
+    Uri.parse('$baseUrl/auth/profile/'),
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    },
+    body: jsonEncode({
+      "notifications_enabled": enabled.toString(), // API expects string "true"/"false"
+    }),
+  );
+
+  if (response.statusCode != 200) {
+    throw Exception('Failed to update notifications: ${response.body}');
+  }
+}
 }

@@ -24,7 +24,6 @@ class ApiService {
     if (token == null) throw Exception("No token");
 
     final url = Uri.parse('${Urls.baseUrl}actions/events/');
-    debugPrint("Calling API: $url");
 
     final response = await http.get(
       url,
@@ -33,8 +32,6 @@ class ApiService {
         'Content-Type': 'application/json',
       },
     );
-
-    debugPrint("Status Code: ${response.statusCode}");
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -71,6 +68,47 @@ class ApiService {
     throw Exception('Failed to load tasks: ${response.statusCode}');
   }
 
+  // ────────────────────── UPDATE EVENT ON SERVER ──────────────────────
+  Future<Event> updateEventOnServer(Event event) async {
+    final token = await _getToken();
+    if (token == null) throw Exception("No token");
+
+    final url = Uri.parse('${Urls.baseUrl}actions/events/${event.id}/');
+    
+    final response = await http.put(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: json.encode(event.toJson()),
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return Event.fromJson(data);
+    }
+
+    throw Exception("Failed to update event: ${response.statusCode} - ${response.body}");
+  }
+
+  // ────────────────────── DELETE EVENT ON SERVER ──────────────────────
+  Future<void> deleteEventOnServer(String eventId) async {
+    final token = await _getToken();
+    if (token == null) throw Exception("No token");
+
+    final url = Uri.parse('${Urls.baseUrl}actions/events/$eventId/');
+
+    final response = await http.delete(
+      url,
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception("Failed to delete event: ${response.statusCode}");
+    }
+  }
+
   // ────────────────────── UPDATE TASK ON SERVER ──────────────────────
   Future<void> updateTaskOnServer(Task task) async {
     try {
@@ -90,7 +128,7 @@ class ApiService {
       );
 
       if (response.statusCode == 200) {
-        debugPrint("Task ${task.id} updated on server************************");
+        debugPrint("Task ${task.id} updated on server");
       } else {
         debugPrint("Update failed: ${response.statusCode}");
         debugPrint("Response: ${response.body}");
@@ -100,7 +138,7 @@ class ApiService {
     }
   }
 
-  // ────────────────────── (Optional) DELETE TASK ──────────────────────
+  // ────────────────────── DELETE TASK ──────────────────────
   Future<void> deleteTaskOnServer(String taskId) async {
     try {
       final token = await _getToken();

@@ -32,23 +32,16 @@ class EventDetailsScreen extends StatelessWidget {
           );
         }
 
-        // Use normalized date key
-        final dateKey = DateTime.utc(
-          event!.eventDateTime?.year ?? 2024,
-          event!.eventDateTime?.month ?? 1,
-          event!.eventDateTime?.day ?? 1,
-        );
-
-        // Now gets both Events and Tasks
-        final itemsOnDay = provider.getItemsForDate(dateKey);
-
-        // Find the exact event by id
-        final currentEvent = itemsOnDay.firstWhere(
-          (item) => item is Event && item.id == event!.id,
-          orElse: () => event!,
-        ) as Event;
-
-        final DateTime displayDate = currentEvent.eventDateTime ?? DateTime.now();
+        Event? currentEvent;
+        try {
+          currentEvent = provider.allEvents.firstWhere(
+            (e) => e.id == event!.id,
+            orElse: () => event!,
+          );
+        } catch (e) {
+          currentEvent = event;
+        }
+        final DateTime displayDate = currentEvent?.eventDateTime ?? DateTime.now();
         final String formattedDate = DateFormat('MMMM d, yyyy').format(displayDate);
         final String formattedTime = DateFormat('h:mm a').format(displayDate);
 
@@ -103,7 +96,7 @@ class EventDetailsScreen extends StatelessWidget {
                   ),
                   child: Center(
                     child: Text(
-                      currentEvent.title,
+                      currentEvent!.title,
                       style: GoogleFonts.inter(
                         fontSize: 16.sp,
                         fontWeight: FontWeight.w600,

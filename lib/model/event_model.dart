@@ -31,45 +31,58 @@ class Event {
 
   // ────────────────────── TO JSON (Send UTC to server) ──────────────────────
   Map<String, dynamic> toJson() {
+    
     final List<Map<String, dynamic>> reminders = [];
     if (reminderMinutes > 0) {
-      reminders.add({
+      final reminderData = {
         "time_before": reminderMinutes,
         "types": callMe ? ["notification", "call"] : ["notification"],
-      });
+      };
+      reminders.add(reminderData);
+      debugPrint("║ 🔔 Reminder created: $reminderData");
+    } else {
+      debugPrint("║ ⏭️  No reminder (reminderMinutes = 0)");
     }
 
-    return {
+    final utcDateTime = eventDateTime?.toUtc();
+    final json = {
       "title": title,
       "description": description,
       "location_address": locationAddress.isEmpty ? null : locationAddress,
-      "event_datetime": eventDateTime?.toUtc().toIso8601String(), // ← UTC!
+      "event_datetime": utcDateTime?.toIso8601String(),
       "reminders": reminders,
     };
+
+    debugPrint("║ 📋 Final JSON:");
+    json.forEach((key, value) {
+      debugPrint("║   $key: $value");
+    });
+
+    return json;
   }
 
   // ────────────────────── FROM JSON (Convert UTC → Local) ──────────────────────
   factory Event.fromJson(Map<String, dynamic> json) {
     DateTime? parsedUtc;
 
-if (json['event_datetime'] != null && json['event_datetime'] != 'null') {
-    parsedUtc = DateTime.tryParse(json['event_datetime']);
-  }
-
-  else if (json['start_time'] != null && json['start_time'] != 'null') {
-    parsedUtc = DateTime.tryParse(json['start_time']);
-  }
-  else if (json['date'] != null) {
-    final dateStr = json['date'] as String;
-    final timeStr = json['time'] as String?;
-    if (timeStr != null) {
-      parsedUtc = DateTime.tryParse("$dateStr $timeStr");
-    } else {
-      parsedUtc = DateTime.tryParse(dateStr);
+    if (json['event_datetime'] != null && json['event_datetime'] != 'null') {
+      parsedUtc = DateTime.tryParse(json['event_datetime']);
     }
-  }
+    else if (json['start_time'] != null && json['start_time'] != 'null') {
+      parsedUtc = DateTime.tryParse(json['start_time']);
+    }
+    else if (json['date'] != null) {
+      final dateStr = json['date'] as String;
+      final timeStr = json['time'] as String?;
+      if (timeStr != null) {
+        parsedUtc = DateTime.tryParse("$dateStr $timeStr");
+      } else {
+        parsedUtc = DateTime.tryParse(dateStr);
+      }
+    }
 
     final DateTime? localDateTime = parsedUtc?.toLocal();
+
 
     int reminderMinutes = 0;
     bool callMe = false;
@@ -79,9 +92,10 @@ if (json['event_datetime'] != null && json['event_datetime'] != 'null') {
       reminderMinutes = first['time_before'] ?? 0;
       final types = (first['types'] as List<dynamic>?) ?? [];
       callMe = types.contains('call');
+      debugPrint("║ 🔔 Reminder: $reminderMinutes min, Call Me: $callMe");
     }
 
-    return Event(
+    final event = Event(
       id: json['id'] as String,
       title: json['title'] ?? 'Untitled Event',
       description: json['description'] ?? '',
@@ -90,6 +104,7 @@ if (json['event_datetime'] != null && json['event_datetime'] != 'null') {
       reminderMinutes: reminderMinutes,
       callMe: callMe,
     );
+    return event;
   }
 
   Event copyWith({
@@ -102,7 +117,7 @@ if (json['event_datetime'] != null && json['event_datetime'] != 'null') {
     bool? callMe,
     bool? isCompleted,
   }) {
-    return Event(
+    final newEvent = Event(
       id: id ?? this.id,
       title: title ?? this.title,
       description: description ?? this.description,
@@ -112,6 +127,8 @@ if (json['event_datetime'] != null && json['event_datetime'] != 'null') {
       callMe: callMe ?? this.callMe,
       isCompleted: isCompleted ?? this.isCompleted,
     );
+
+    return newEvent;
   }
 
   @override

@@ -176,7 +176,7 @@ class NotificationService {
     // Auto-resend on token refresh
     FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
       print("FCM Token refreshed! Resending to backend...");
-      await sendFcmTokenToBackend(); // This will print again on success
+      await sendFcmTokenToBackend(); 
     });
   }
 }

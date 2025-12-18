@@ -1,4 +1,4 @@
-// lib/providers/calendar_provider.dart
+// lib/repository/calendar_service.dart
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -63,6 +63,7 @@ class CalendarProvider extends ChangeNotifier {
       _rebuildItemsMap();
     } catch (e) {
       _errorMessage = "Failed to load schedule";
+      debugPrint("Load error: $e");
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -107,51 +108,153 @@ class CalendarProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-void updateEventTime(String eventId, DateTime newTime) {
-  final index = _allEvents.indexWhere((e) => e.id == eventId);
-  if (index == -1) return;
-
-  _allEvents[index] =
-      _allEvents[index].copyWith(eventDateTime: newTime);
-
-  _rebuildItemsMap();
-  notifyListeners();
-}
-
-
-  void updateItem(dynamic oldItem, dynamic newItem) {
-    if (oldItem is Event && newItem is Event) {
-      final i = _allEvents.indexWhere((e) => e.id == oldItem.id);
-      if (i != -1) _allEvents[i] = newItem;
-    } else if (oldItem is Task && newItem is Task) {
-      final i = _allTasks.indexWhere((t) => t.id == oldItem.id);
-      if (i != -1) _allTasks[i] = newItem;
+  // ────────────────────── UPDATE EVENT TIME (Drag & Drop) ──────────────────────
+  Future<void> updateEventTime(String eventId, DateTime newTime) async {
+    
+    final index = _allEvents.indexWhere((e) => e.id == eventId);
+    debugPrint("║ Event found at index: $index");
+    
+    if (index == -1) {
+      return;
     }
+
+    final oldEvent = _allEvents[index];
+    debugPrint("║ Old event title: ${oldEvent.title}");
+    debugPrint("║ Old event time: ${oldEvent.eventDateTime}");
+    
+    final updatedEvent = oldEvent.copyWith(eventDateTime: newTime);
+    debugPrint("║ Updated event time: ${updatedEvent.eventDateTime}");
+
+    // Optimistic update
+    _allEvents[index] = updatedEvent;
     _rebuildItemsMap();
     notifyListeners();
+
+    // Sync with server
+    try {
+      await ApiService().updateEventOnServer(updatedEvent);
+    } catch (e, stackTrace) {
+
+      
+      // Rollback on error
+      _allEvents[index] = oldEvent;
+      _rebuildItemsMap();
+      notifyListeners();
+      rethrow;
+    }
   }
 
-  void removeItem(dynamic item) {
-    if (item is Event) _allEvents.removeWhere((e) => e.id == item.id);
-    if (item is Task) _allTasks.removeWhere((t) => t.id == item.id);
-    _rebuildItemsMap();
-    notifyListeners();
+  // ────────────────────── UPDATE EVENT (Full Edit) ──────────────────────
+  Future<void> updateItem(dynamic oldItem, dynamic newItem) async {
+    
+    if (oldItem is Event && newItem is Event) {
+      final index = _allEvents.indexWhere((e) => e.id == oldItem.id);
+      if (index == -1) {
+        return;
+      }
+
+      final previousEvent = _allEvents[index];
+
+      _allEvents[index] = newItem;
+      _rebuildItemsMap();
+      notifyListeners();
+
+      // Sync with server
+      try {
+        debugPrint("║ 🚀 Making API call...");
+        final updatedFromServer = await ApiService().updateEventOnServer(newItem);
+        
+        _allEvents[index] = updatedFromServer;
+        _rebuildItemsMap();
+        notifyListeners();
+      } catch (e, stackTrace) {
+        
+        // Rollback
+        _allEvents[index] = previousEvent;
+        _rebuildItemsMap();
+        notifyListeners();
+        
+        rethrow;
+      }
+    } else if (oldItem is Task && newItem is Task) {
+
+      final index = _allTasks.indexWhere((t) => t.id == oldItem.id);
+      if (index != -1) {
+        _allTasks[index] = newItem;
+        _rebuildItemsMap();
+        notifyListeners();
+      }
+    } else {
+
+    }
   }
 
-  void toggleEventCompletion(String eventId) {
-  final index = _allEvents.indexWhere((e) => e.id == eventId);
-  if (index != -1) {
-    _allEvents[index] = _allEvents[index].copyWith(
-      isCompleted: !_allEvents[index].isCompleted,
+  // ────────────────────── DELETE EVENT ──────────────────────
+  Future<void> removeItem(dynamic item) async {
+    if (item is Event) {
+      
+      final removedEvent = item;
+      final removedIndex = _allEvents.indexWhere((e) => e.id == item.id);
+      debugPrint("║ Event index in list: $removedIndex");
+      
+      // Optimistic delete
+      _allEvents.removeWhere((e) => e.id == item.id);
+      _rebuildItemsMap();
+      notifyListeners();
+      // Sync with server
+      try {
+        await ApiService().deleteEventOnServer(item.id);
+      } catch (e, stackTrace) {
+        
+        // Rollback
+        _allEvents.add(removedEvent);
+        _rebuildItemsMap();
+        notifyListeners();
+        rethrow;
+      }
+    } else if (item is Task) {
+      debugPrint("📝 Deleting Task (local only)");
+      _allTasks.removeWhere((t) => t.id == item.id);
+      _rebuildItemsMap();
+      notifyListeners();
+    }
+  }
+
+  // ────────────────────── TOGGLE EVENT COMPLETION ──────────────────────
+  Future<void> toggleEventCompletion(String eventId) async {
+    
+    final index = _allEvents.indexWhere((e) => e.id == eventId);
+    debugPrint("║ Event found at index: $index");
+    
+    if (index == -1) {
+      return;
+    }
+
+    final oldEvent = _allEvents[index];
+    debugPrint("║ Current completion status: ${oldEvent.isCompleted}");
+    
+    final updatedEvent = oldEvent.copyWith(
+      isCompleted: !oldEvent.isCompleted,
     );
+    debugPrint("║ New completion status: ${updatedEvent.isCompleted}");
+
+    // Optimistic update
+    _allEvents[index] = updatedEvent;
     _rebuildItemsMap();
     notifyListeners();
+    try {
+      await ApiService().updateEventOnServer(updatedEvent);
+    } catch (e, stackTrace) {
+
+      
+      // Rollback
+      _allEvents[index] = oldEvent;
+      _rebuildItemsMap();
+      notifyListeners();
+      
+    }
   }
 }
-}
-
-
-
 
 
 

@@ -252,7 +252,8 @@ class _HomeScreenState extends State<HomeScreen>
       if (!mounted) return;
       TopSnackBar.show(
         context,
-        message: 'Failed to process file: $e',
+        message: 'Failed to process file',
+        // message: 'Failed to process file: $e',
         backgroundColor: Colors.red[700]!,
       );
     } finally {
@@ -613,29 +614,25 @@ class _HomeScreenState extends State<HomeScreen>
           ),
 
           // Processing overlay
+          // Processing overlay (without dark background)
           if (_isProcessing)
-            Container(
-              color: Colors.black.withOpacity(0.3),
-              child: Center(
-                child: Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(20.w),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircularProgressIndicator(color: AppColors.green),
-                        SizedBox(height: 16.h),
-                        Text(
-                          'Processing...',
-                          style: TextStyle(
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(
+                    color: AppColors.black,
+                    strokeWidth: 4,
+                  ),
+                  SizedBox(height: 16.h),
+                  Text(
+                    'Processing...',
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                ),
+                ],
               ),
             ),
         ],

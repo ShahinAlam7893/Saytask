@@ -443,11 +443,12 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                 TextButton.icon(
                   onPressed: () async {
                     final confirm = await showDialog<bool>(context: context, builder: (_) => AlertDialog(
+                      backgroundColor: Colors.white,
                       title: const Text('Delete Task?'),
                       content: const Text('This action cannot be undone.'),
                       actions: [
-                        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-                        TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+                        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel', style: TextStyle(color: AppColors.black))),
+                        TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete', style: TextStyle(color: AppColors.red))),
                       ],
                     ));
                     if (confirm == true) {

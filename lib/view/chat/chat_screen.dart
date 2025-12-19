@@ -132,8 +132,7 @@ class _ChatPageState extends State<ChatPage> {
                   itemBuilder: (context, index) {
                     final msg = vm.messages[vm.messages.length - 1 - index];
 
-                    if ((msg.type == MessageType.event || msg.type == MessageType.task) && 
-                        msg.eventTitle != null) {
+                    if (msg.type == MessageType.event || msg.type == MessageType.task) {
                       return _EventTaskCard(
                         key: ValueKey(msg.messageId ?? index),
                         message: msg,
@@ -284,7 +283,7 @@ class _EventTaskCardState extends State<_EventTaskCard> {
   }
 
   void _onCallMeChanged() {
-    setState(() {}); // Rebuild when switch changes
+    setState(() {});
   }
 
   // ⭐ DELAY +1 HOUR

@@ -39,6 +39,7 @@ dependencies:
   firebase_messaging: ^16.0.4
   flutter_local_notifications: ^19.5.0
   shared_preferences: ^2.5.3
+  lottie: ^3.3.1
 
 
 dev_dependencies:  
@@ -59,6 +60,7 @@ flutter:
     - assets/images/
     - assets/icons/
     - assets/fonts/
+    - assets/animations/
 
   fonts:
     - family: Poppins

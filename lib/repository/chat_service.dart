@@ -12,6 +12,7 @@ class ChatViewModel extends ChangeNotifier {
 
   bool isLoading = false;
   bool isSaving = false;
+  bool isTyping = false;
 
   List<ChatMessage> get messages => _messages;
 
@@ -31,12 +32,11 @@ class ChatViewModel extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error fetching history: $e');
     } finally {
-      isLoading = false;
       notifyListeners();
     }
   }
 
-    Future<void> sendMessage(String message) async {
+  Future<void> sendMessage(String message) async {
     // Add user message
     _messages.add(
       ChatMessage(
@@ -48,11 +48,14 @@ class ChatViewModel extends ChangeNotifier {
     );
     notifyListeners();
 
-    isLoading = true;
+    isTyping = true;
     notifyListeners();
 
     try {
       final response = await _repository.sendMessage(message);
+
+      isTyping = false;
+      notifyListeners();
 
       final aiMessage = response['message'] as String;
       final responseType = response['response_type'] as String;
@@ -80,7 +83,8 @@ class ChatViewModel extends ChangeNotifier {
       if (reminders != null && reminders.isNotEmpty) {
         final firstReminder = reminders.first as Map<String, dynamic>;
         final timeBefore = firstReminder['time_before'] as int?;
-        final types = (firstReminder['types'] as List<dynamic>?)?.cast<String>() ?? [];
+        final types =
+            (firstReminder['types'] as List<dynamic>?)?.cast<String>() ?? [];
 
         callMe = types.contains('call');
 
@@ -129,6 +133,8 @@ class ChatViewModel extends ChangeNotifier {
         await _saveNoteToBackend(aiMessage);
       }
     } catch (e) {
+      isTyping = false;
+      notifyListeners();
       debugPrint('Error sending message: $e');
       _messages.add(
         ChatMessage(

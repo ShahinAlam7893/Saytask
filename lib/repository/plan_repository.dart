@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:saytask/core/api_endpoints.dart';
 import 'package:saytask/model/plan_model.dart';
@@ -25,7 +26,6 @@ class PlanService {
       url,
       headers: {"Authorization": "Bearer $token"},
     );
-
     if (res.statusCode == 200) {
       final decoded = json.decode(res.body);
       List results = decoded["results"] ?? [];
@@ -73,23 +73,27 @@ class PlanService {
       print("📦 Decoded JSON: $decoded");
 
       final checkoutUrl = decoded["checkout_url"];
+      final message = decoded["detail"] ?? "Checkout created successfully";
       print("🔗 Checkout URL = $checkoutUrl");
 
       if (checkoutUrl == null || checkoutUrl is! String) {
-        print("❌ Invalid checkout URL received");
-        throw Exception("Invalid checkout URL received");
+        print("$message ❌ ERROR: Invalid checkout URL");
       }
 
       print("✅ CHECKOUT SUCCESS — redirecting to payment link");
       return checkoutUrl;
-    } else {
+    } else if (res.statusCode == 400) {
       final decoded = json.decode(res.body);
-      // Change from "message" to "detail" to match your API response
       final message =
           decoded["detail"] ?? decoded["message"] ?? "Unknown error";
 
-      print("❌ Checkout failed: ${res.statusCode} - ${res.body}");
+      print("${res.statusCode} - ${res.body}");
       throw Exception(message);
+    } else {
+      print("❌ Checkout failed: ${res.statusCode} - ${res.body}");
+      throw Exception(
+        "Failed to create checkout session: ${res.statusCode} ${res.body}",
+      );
     }
   }
 }

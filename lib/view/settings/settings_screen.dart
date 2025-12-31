@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:saytask/repository/plan_service.dart';
 import 'package:saytask/repository/settings_service.dart';
 import 'package:saytask/view/settings/profile_card.dart';
 import 'package:saytask/view_model/auth_view_model.dart';
@@ -20,17 +18,18 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool notifications = true;
   bool whatsappBot = true;
   bool enableAIChatbot = true;
   bool isSubscriptionExpanded = false;
   int selectedPlan = 0;
-  
+
   @override
   Widget build(BuildContext context) {
     final settingsViewModel = context.watch<SettingsViewModel>();
     final authVM = context.watch<AuthViewModel>();
     final user = authVM.currentUser;
+
+    final bool notificationsEnabled = user?.notificationsEnabled ?? true;
 
     return Scaffold(
       backgroundColor: AppColors.white,
@@ -110,8 +109,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               SettingToggleTile(
                 title: 'Notifications',
-                value: notifications,
-                onChanged: (v) => setState(() => notifications = v),
+                value: notificationsEnabled,
+                onChanged: (bool newValue) async {
+                  
+                  final success = await authVM.updateNotificationsEnabled(newValue);
+
+                  if (!success && mounted) {
+                    
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Failed to update notifications')),
+                    );
+                  }
+                },
               ),
               SizedBox(height: 8.h),
               SettingTile(

@@ -1,3 +1,4 @@
+import 'dart:convert';
 
 class UserModel {
   final String userId;
@@ -8,7 +9,7 @@ class UserModel {
   final String? dateOfBirth; 
   final String? country;
   final String? phoneNumber;
-  final bool notificationsEnabled;
+  final bool? notificationsEnabled;
 
   UserModel({
     required this.userId,
@@ -18,7 +19,7 @@ class UserModel {
     this.dateOfBirth,
     this.country,
     this.phoneNumber,
-    this.notificationsEnabled = true,
+    this.notificationsEnabled,
   });
 
   factory UserModel.fromJwt(Map<String, dynamic> decoded) {
@@ -30,7 +31,9 @@ class UserModel {
       dateOfBirth: decoded['birth_date'] ?? decoded['date_of_birth'],
       country: decoded['country'],
       phoneNumber: decoded['phone_number'],
-      notificationsEnabled: decoded['notifications_enabled'] != false,
+      notificationsEnabled: decoded['notifications_enabled'] == true || 
+                             decoded['notifications_enabled'] == 'true' ||
+                             decoded['notifications_enabled'] == '1',
     );
   }
 
@@ -40,7 +43,7 @@ class UserModel {
       "gender": gender,
       "birth_date": dateOfBirth,
       "country": country,
-      "notifications_enabled": notificationsEnabled.toString(),
+      "notifications_enabled": notificationsEnabled?.toString() ?? 'false',
       "phone_number": phoneNumber,
     };
   }

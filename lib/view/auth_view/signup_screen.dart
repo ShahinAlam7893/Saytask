@@ -348,7 +348,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
                     ),
                     onPressed: () async{
-                      await authVM.appleLogin();
+                      // await authVM.appleLogin();
                     },
                     icon: SvgPicture.asset('assets/images/ri_apple-line.svg', width: 20.w),
                     label: Text(

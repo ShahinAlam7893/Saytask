@@ -248,6 +248,32 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
+// Add this inside AuthViewModel class
+Future<bool> updateNotificationsEnabled(bool enabled) async {
+  isLoading = true;
+  notifyListeners();
+
+  try {
+    await _repository.updateProfileNotifications(enabled);
+    
+    // Update currentUser if you have a field for it
+    if (currentUser != null) {
+      currentUser = currentUser!.copyWith(notificationsEnabled: enabled);
+    }
+    
+    notifyListeners();
+    return true;
+  } catch (e) {
+    if (kDebugMode) print('Update notifications error: $e');
+    return false;
+  } finally {
+    isLoading = false;
+    notifyListeners();
+  }
+}
+
+
+
   final _auth = FirebaseAuth.instance;
   final _googleSignIn = GoogleSignIn();
 

@@ -8,7 +8,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:saytask/model/event_model.dart';
+import 'package:saytask/model/today_task_model.dart';
 import 'package:saytask/repository/calendar_service.dart';
+import 'package:saytask/repository/today_task_service.dart';
 import 'package:saytask/res/color.dart';
 
 class CalendarScreen extends StatefulWidget {
@@ -20,10 +22,13 @@ class CalendarScreen extends StatefulWidget {
 
 class _CalendarScreenState extends State<CalendarScreen> {
   @override
-void didChangeDependencies() {
-  super.didChangeDependencies();
-  context.read<CalendarProvider>().loadEvents();
-}
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<CalendarProvider>().loadEvents();
+      context.read<TaskProvider>().loadTasks();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -69,21 +74,21 @@ void didChangeDependencies() {
                 SizedBox(height: 8.h),
                 Consumer<CalendarProvider>(
                   builder: (context, provider, child) {
-                    final events = provider.selectedDayEvents;
-                    if (events.isEmpty) {
+                    final items = provider.selectedDayItems;
+                    if (items.isEmpty) {
                       return Padding(
                         padding: EdgeInsets.only(top: 10.h, bottom: 30.h),
-                        child: const Center(child: Text("No events for this day.")),
+                        child: const Center(child: Text("No events or tasks for this day.")),
                       );
                     }
                     return ListView.builder(
                       padding: EdgeInsets.only(top: 10.h, bottom: 30.h),
                       physics: const NeverScrollableScrollPhysics(),
                       shrinkWrap: true,
-                      itemCount: events.length,
+                      itemCount: items.length,
                       itemBuilder: (context, index) {
-                        final event = events[index];
-                        return EventCard(event: event);
+                        final item = items[index];
+                        return UnifiedCalendarCard(item: item);
                       },
                     );
                   },
@@ -97,6 +102,7 @@ void didChangeDependencies() {
   }
 }
 
+// === All your existing widgets unchanged (CalendarHeader, WeekdayHeaders, CalendarGrid, DayTile, EventListHeader) ===
 class CalendarHeader extends StatelessWidget {
   const CalendarHeader({super.key});
 
@@ -128,6 +134,7 @@ class CalendarHeader extends StatelessWidget {
     );
   }
 }
+
 class WeekdayHeaders extends StatelessWidget {
   const WeekdayHeaders({super.key});
 
@@ -147,6 +154,7 @@ class WeekdayHeaders extends StatelessWidget {
     );
   }
 }
+
 class CalendarGrid extends StatelessWidget {
   const CalendarGrid({super.key});
 
@@ -180,6 +188,7 @@ class CalendarGrid extends StatelessWidget {
     );
   }
 }
+
 class DayTile extends StatelessWidget {
   final DateTime day;
   final bool isCurrentMonth;
@@ -190,7 +199,7 @@ class DayTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final provider = context.watch<CalendarProvider>();
     final isSelected = DateUtils.isSameDay(provider.selectedDate, day);
-    final hasEvents = provider.hasEvents(day);
+    final hasEvents = provider.hasItems(day);
 
     return GestureDetector(
       onTap: () => provider.selectDate(day),
@@ -230,6 +239,7 @@ class DayTile extends StatelessWidget {
     );
   }
 }
+
 class EventListHeader extends StatelessWidget {
   const EventListHeader({super.key});
 
@@ -263,14 +273,31 @@ class EventListHeader extends StatelessWidget {
     );
   }
 }
-class EventCard extends StatelessWidget {
-  final Event event;
-  const EventCard({super.key, required this.event});
+
+// === Unified Card — Exact same design for Task & Event (no tags for Task) ===
+class UnifiedCalendarCard extends StatelessWidget {
+  final dynamic item;
+
+  const UnifiedCalendarCard({super.key, required this.item});
 
   @override
   Widget build(BuildContext context) {
+    final isTask = item is Task;
+    final isEvent = item is Event;
+
+    final DateTime? eventDateTime = isTask ? item.startTime : item.eventDateTime;
+    if (eventDateTime == null) return const SizedBox.shrink();
+
+    final timeText = TimeOfDay.fromDateTime(eventDateTime).format(context);
+
     return InkWell(
-      onTap: () => context.push('/event_details', extra: event),
+      onTap: () {
+        if (isEvent) {
+          context.push('/event_details', extra: item);
+        } else if (isTask) {
+          context.push('/task-details/${item.id}');
+        }
+      },
       child: Container(
         margin: EdgeInsets.only(bottom: 12.h),
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
@@ -291,7 +318,7 @@ class EventCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              event.title,
+              item.title,
               style: GoogleFonts.inter(fontSize: 14.sp, fontWeight: FontWeight.w500, color: Colors.black),
             ),
             SizedBox(height: 8.h),
@@ -299,27 +326,34 @@ class EventCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.location_on, size: 14.sp, color: AppColors.deepBlack),
+                    Icon(Icons.access_time, size: 14.sp, color: AppColors.deepBlack),
                     SizedBox(width: 4.w),
                     Text(
-                      event.locationAddress.isNotEmpty ? event.locationAddress : 'No location specified',
+                      timeText,
                       style: GoogleFonts.inter(fontSize: 12.sp, color: AppColors.deepBlack),
                     ),
                   ],
                 ),
                 SizedBox(height: 5.h),
-                Row(
-                  children: [
-                    Icon(Icons.access_time, size: 14.sp, color: AppColors.deepBlack),
-                    SizedBox(width: 4.w),
-                    Text(
-                      event.eventDateTime != null
-                          ? TimeOfDay.fromDateTime(event.eventDateTime!).format(context)
-                          : 'No time specified',
-                      style: GoogleFonts.inter(fontSize: 12.sp, color: AppColors.deepBlack),
-                    ),
-                  ],
-                ),
+                if (isEvent)
+                  Row(
+                    children: [
+                      Icon(Icons.location_on, size: 14.sp, color: AppColors.deepBlack),
+                      SizedBox(width: 4.w),
+                      Expanded(
+                        child: Text(
+                          item.locationAddress.isNotEmpty ? item.locationAddress : 'No location specified',
+                          style: GoogleFonts.inter(fontSize: 12.sp, color: AppColors.deepBlack),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                if (isTask)
+                  Text(
+                    'No location specified',
+                    style: GoogleFonts.inter(fontSize: 12.sp, color: AppColors.deepBlack.withOpacity(0.6)),
+                  ),
               ],
             ),
           ],

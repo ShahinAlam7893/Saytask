@@ -17,13 +17,13 @@ class EditNoteViewModel with ChangeNotifier {
   bool get isSaving => _isSaving;
 
   final titleController = TextEditingController();
-  final contentController = TextEditingController(); // original text
-  final structuredSummaryController = TextEditingController(); // bullet points
+  final contentController = TextEditingController();
+  final structuredSummaryController = TextEditingController();
 
   void initialize(Note note) {
     titleController.text = note.title;
-    contentController.text = note.original; // ← API field: "original"
-    structuredSummaryController.text = note.structuredSummary; // ← from getter
+    contentController.text = note.original; 
+    structuredSummaryController.text = note.structuredSummary; 
   }
 
   void enableEditing() {

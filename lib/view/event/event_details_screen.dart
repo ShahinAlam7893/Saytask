@@ -12,7 +12,7 @@ import 'package:saytask/repository/calendar_service.dart';
 import 'package:saytask/res/color.dart';
 
 class EventDetailsScreen extends StatelessWidget {
-  final Event? event; // Can be passed directly (e.g. from voice card)
+  final Event? event;
 
   const EventDetailsScreen({super.key, required this.event});
 
@@ -20,7 +20,6 @@ class EventDetailsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<CalendarProvider>(
       builder: (context, provider, child) {
-        // If no event passed, show empty state
         if (event == null) {
           return Scaffold(
             backgroundColor: Colors.white,
@@ -33,21 +32,16 @@ class EventDetailsScreen extends StatelessWidget {
           );
         }
 
-        // Find the latest version of this event in provider (in case it was edited)
-        final dateKey = DateTime.utc(
-          event!.eventDateTime?.year ?? 2024,
-          event!.eventDateTime?.month ?? 1,
-          event!.eventDateTime?.day ?? 1,
-        );
-
-        final eventsOnDay = provider.getEventsForDate(dateKey);
-        final currentEvent = eventsOnDay.firstWhere(
-          (e) => e.id == event!.id,
-          orElse: () => event!, // fallback to passed event
-        );
-
-        // Format date & time safely
-        final DateTime displayDate = currentEvent.eventDateTime ?? DateTime.now();
+        Event? currentEvent;
+        try {
+          currentEvent = provider.allEvents.firstWhere(
+            (e) => e.id == event!.id,
+            orElse: () => event!,
+          );
+        } catch (e) {
+          currentEvent = event;
+        }
+        final DateTime displayDate = currentEvent?.eventDateTime ?? DateTime.now();
         final String formattedDate = DateFormat('MMMM d, yyyy').format(displayDate);
         final String formattedTime = DateFormat('h:mm a').format(displayDate);
 
@@ -102,7 +96,7 @@ class EventDetailsScreen extends StatelessWidget {
                   ),
                   child: Center(
                     child: Text(
-                      currentEvent.title,
+                      currentEvent!.title,
                       style: GoogleFonts.inter(
                         fontSize: 16.sp,
                         fontWeight: FontWeight.w600,
@@ -114,7 +108,6 @@ class EventDetailsScreen extends StatelessWidget {
                 ),
                 SizedBox(height: 16.h),
 
-                // Description
                 Text(
                   "Description:",
                   style: GoogleFonts.inter(fontSize: 14.sp, fontWeight: FontWeight.w600),
@@ -171,7 +164,6 @@ class EventDetailsScreen extends StatelessWidget {
                 ),
                 SizedBox(height: 10.h),
 
-                // Reminder + Call Me
                 Row(
                   children: [
                     Icon(Icons.notifications, size: 18.sp, color: Colors.black),

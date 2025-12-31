@@ -316,7 +316,7 @@ final GoRouter router = GoRouter(
   },
 ),
     GoRoute(
-  path: '/task-details/:id',  // ← Use path parameter
+  path: '/task-details/:id',  
   name: 'taskDetails',
   pageBuilder: (context, state) {
     final taskId = state.pathParameters['id']!;

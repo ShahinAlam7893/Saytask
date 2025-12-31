@@ -5,12 +5,14 @@ class Plan {
   final String name;
   final double monthlyPrice;
   final double annualPrice;
+  final String? currentPlan;
 
   Plan({
     required this.id,
     required this.name,
     required this.monthlyPrice,
     required this.annualPrice,
+    this.currentPlan,
   });
 
   factory Plan.fromJson(Map<String, dynamic> json) {
@@ -19,6 +21,7 @@ class Plan {
       name: json['name'] as String? ?? 'Unknown',
       monthlyPrice: _parsePrice(json['monthly_price']),
       annualPrice: _parsePrice(json['annual_price']),
+      currentPlan: json['current_plan'] as String?,
     );
   }
 
@@ -33,6 +36,6 @@ class Plan {
 
   @override
   String toString() {
-    return 'Plan(id: $id, name: $name, monthly: $monthlyPrice, annual: $annualPrice)';
+    return 'Plan(id: $id, name: $name, monthly: $monthlyPrice, annual: $annualPrice, currentPlan: $currentPlan)';
   }
 }

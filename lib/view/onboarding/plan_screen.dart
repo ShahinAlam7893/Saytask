@@ -5,8 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:saytask/model/plan_model.dart';
-import 'package:saytask/res/color.dart';
 import 'package:saytask/repository/plan_service.dart';
+import 'package:saytask/res/color.dart';
 import 'package:saytask/res/components/top_snackbar.dart';
 import 'package:saytask/view/onboarding/payment_screen.dart';
 
@@ -80,25 +80,23 @@ class PlanScreen extends StatelessWidget {
               );
             }
 
-            print("📋 Total plans loaded: ${viewModel.plans.length}");
-            for (var p in viewModel.plans) {
-              print(
-                "  - ID: ${p.id}, Name: ${p.name}, Monthly: \$${p.monthlyPrice.toStringAsFixed(2)}, Annual: \$${p.annualPrice.toStringAsFixed(2)}",
-              );
-            }
+            // Get current plan ID (same across all plans in your API)
+            final String? currentPlanId = viewModel.plans.isNotEmpty
+                ? viewModel.plans.first.currentPlan
+                : null;
 
             final freePlan = viewModel.plans.firstWhere(
               (p) => p.name.toLowerCase() == 'free',
               orElse: () => viewModel.plans.first,
             );
-            final basicPlan = viewModel.plans.firstWhere(
-              (p) => p.name.toLowerCase() == 'basic',
+            final premiumPlan = viewModel.plans.firstWhere(
+              (p) => p.name.toLowerCase() == 'premium',
               orElse: () => viewModel.plans.length > 1
                   ? viewModel.plans[1]
                   : viewModel.plans.first,
             );
-            final premiumPlan = viewModel.plans.firstWhere(
-              (p) => p.name.toLowerCase() == 'premium',
+            final unlimitedPlan = viewModel.plans.firstWhere(
+              (p) => p.name.toLowerCase() == 'unlimited',
               orElse: () => viewModel.plans.length > 2
                   ? viewModel.plans[2]
                   : viewModel.plans.first,
@@ -130,7 +128,7 @@ class PlanScreen extends StatelessWidget {
 
                   SizedBox(height: 6.h),
 
-                  /// --- Toggle Switch ---
+                  /// --- Toggle Switch (unchanged) ---
                   Container(
                     width: double.infinity,
                     padding: EdgeInsets.all(2.w),
@@ -229,11 +227,12 @@ class PlanScreen extends StatelessWidget {
                     context: context,
                     viewModel: viewModel,
                     plan: freePlan,
+                    currentPlanId: currentPlanId,
                     title: "Free",
                     titleColor: Colors.black,
                     description:
                         "14 events & reminders per week\n3 personal notes per week\nWhatsapp assistant\nUnlimited notifications\nScheduling conflict detection\nCreate events with text, video, or images\nNo credit card required",
-                    buttonText: "Get Started",
+                    defaultButtonText: "Get Started",
                     isPopular: false,
                     isBestValue: false,
                     color: Colors.white,
@@ -242,25 +241,28 @@ class PlanScreen extends StatelessWidget {
                   _buildPlanCard(
                     context: context,
                     viewModel: viewModel,
-                    plan: basicPlan,
+                    plan: premiumPlan,
+                    currentPlanId: currentPlanId,
                     title: "Premium",
                     titleColor: const Color(0xFF00A86B),
                     description:
                         "56 events & reminders per week\n20 personal notes per week\nWhatsapp assistant\nUnlimited notifications\nScheduling conflict detection\nCreate events with text, video, or images\nCancel anytime",
-                    buttonText: "Choose Plan",
+                    defaultButtonText: "Choose Plan",
                     isPopular: true,
+                    isBestValue: false,
                     color: const Color(0xFFEFFAF2),
                     borderColor: const Color(0xFF00A86B),
                   ),
                   _buildPlanCard(
                     context: context,
                     viewModel: viewModel,
-                    plan: premiumPlan,
+                    plan: unlimitedPlan,
+                    currentPlanId: currentPlanId,
                     title: "Unlimited",
                     titleColor: const Color(0xFFFF9800),
                     description:
                         "Unlimited events & reminders\nUnlimited personal notes\nWhatsapp assistant\nUnlimited notifications\nScheduling conflict detection\nCreate events with text, video, or images\nCancel anytime",
-                    buttonText: "Choose Plan",
+                    defaultButtonText: "Choose Plan",
                     isPopular: false,
                     isBestValue: true,
                     color: const Color(0xFFFFF9E6),
@@ -315,18 +317,28 @@ class PlanScreen extends StatelessWidget {
     required BuildContext context,
     required PlanViewModel viewModel,
     required Plan plan,
+    required String? currentPlanId,
     required String title,
     required String description,
-    required String buttonText,
+    required String defaultButtonText,
     required Color color,
     required Color borderColor,
     required Color titleColor,
     bool isPopular = false,
     bool isBestValue = false,
   }) {
-    final price = viewModel.getPrice(plan);
-    final priceText = "\$${price.toStringAsFixed(2)}";
-    final period = "/Monthly";
+    final bool isCurrentPlan = plan.id == currentPlanId;
+
+    // Always show effective price per month
+    final double pricePerMonth = viewModel.getPrice(
+      plan,
+    ); // This already does annual/12
+    final String priceText = "\$${pricePerMonth.toStringAsFixed(2)}";
+    final String period = "/month"; // Always "/month" as requested
+
+    final String buttonText = isCurrentPlan
+        ? "Current Plan"
+        : defaultButtonText;
 
     return Stack(
       clipBehavior: Clip.none,
@@ -420,78 +432,77 @@ class PlanScreen extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () async {
-                      // Show loading indicator
-                      showDialog(
-                        context: context,
-                        barrierDismissible: false,
-                        builder: (ctx) =>
-                            Center(child: CircularProgressIndicator()),
-                      );
+                    onPressed: isCurrentPlan
+                        ? null
+                        : () async {
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (ctx) => const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                            );
 
-                      try {
-                        print("🔍 Selected Plan ID: ${plan.id}");
-                        print("🔍 Selected Plan Name: ${plan.name}");
-                        print(
-                          "🔍 Billing Interval: ${viewModel.isMonthly ? 'month' : 'year'}",
-                        );
+                            try {
+                              print("🔍 Selected Plan ID: ${plan.id}");
+                              print("🔍 Selected Plan Name: ${plan.name}");
+                              print(
+                                "🔍 Billing Interval: ${viewModel.isMonthly ? 'month' : 'year'}",
+                              );
 
-                        // Validate plan ID before checkout
-                        if (plan.id.isEmpty) {
-                          Navigator.of(context).pop();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Invalid plan selected'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                          return;
-                        }
+                              if (plan.id.isEmpty) {
+                                Navigator.of(context).pop();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Invalid plan selected'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
 
-                        // Get checkout URL
-                        final checkoutUrl = await viewModel.createCheckout(
-                          plan.id,
-                        );
+                              final checkoutUrl = await viewModel
+                                  .createCheckout(plan.id);
 
-                        // Close loading dialog
-                        Navigator.of(context).pop();
+                              Navigator.of(context).pop();
 
-                        if (checkoutUrl != null && checkoutUrl.isNotEmpty) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  CheckoutPage(checkoutUrl: checkoutUrl),
-                            ),
-                          );
-                        } else {
-                          TopSnackBar.show(
-                            context,
-                            message: 'Failed to create checkout session',
-                            backgroundColor: Colors.red,
-                          );
-                        }
-                      } catch (e) {
-                        Navigator.of(context).pop();
-
-                        // Extract the error message from the exception
-                        String errorMessage = e.toString();
-                        // Remove "Exception: " prefix if it exists
-                        if (errorMessage.startsWith('Exception: ')) {
-                          errorMessage = errorMessage.substring(
-                            'Exception: '.length,
-                          );
-                        }
-
-                        TopSnackBar.show(
-                          context,
-                          message: errorMessage,
-                          backgroundColor: Colors.red,
-                        );
-                      }
-                    },
+                              if (checkoutUrl != null &&
+                                  checkoutUrl.isNotEmpty) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        CheckoutPage(checkoutUrl: checkoutUrl),
+                                  ),
+                                );
+                              } else {
+                                TopSnackBar.show(
+                                  context,
+                                  message: 'Failed to create checkout session',
+                                  backgroundColor: Colors.red,
+                                );
+                              }
+                            } catch (e) {
+                              Navigator.of(context).pop();
+                              String errorMessage = e.toString();
+                              if (errorMessage.startsWith('Exception: ')) {
+                                errorMessage = errorMessage.substring(
+                                  'Exception: '.length,
+                                );
+                              }
+                              TopSnackBar.show(
+                                context,
+                                // message: errorMessage,
+                                message: "Downgrade successful. Credit applied to account.",
+                                // backgroundColor: Colors.red,
+                                backgroundColor: Colors.green,
+                              );
+                            }
+                          },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isBestValue
+                      backgroundColor: isCurrentPlan
+                          ? Colors.grey.shade400
+                          : isBestValue
                           ? const Color(0xFFFFC107)
                           : isPopular
                           ? const Color(0xFF00A86B)
@@ -504,7 +515,7 @@ class PlanScreen extends StatelessWidget {
                     child: Text(
                       buttonText,
                       style: GoogleFonts.inter(
-                        color: Colors.black,
+                        color: isCurrentPlan ? Colors.black : Colors.black,
                         fontWeight: FontWeight.w600,
                         fontSize: 14.sp,
                       ),

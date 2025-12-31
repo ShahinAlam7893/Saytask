@@ -1,6 +1,8 @@
+// view/screens/privacy_policy_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:saytask/model/legal_view_model.dart';
 import 'package:saytask/res/color.dart';
 
 
@@ -9,85 +11,101 @@ class PrivacyPolicyScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: Padding(
-          padding: EdgeInsets.all(12.w),
-          child: Container(
-            height: 24.h,
-            width: 24.w,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: Colors.black,
-                width: 1.0,
+    return ChangeNotifierProvider(
+      create: (_) {
+        final vm = LegalViewModel();
+        vm.loadLegalContent();
+        return vm;
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.white,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: Padding(
+            padding: EdgeInsets.all(12.w),
+            child: Container(
+              height: 24.h,
+              width: 24.w,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.black, width: 1.0),
+              ),
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                icon: Icon(Icons.arrow_back, color: Colors.black, size: 20.sp),
+                onPressed: () => Navigator.pop(context),
               ),
             ),
-            child: IconButton(
-              padding: EdgeInsets.zero,
-              icon: Icon(
-                Icons.arrow_back,
-                color: Colors.black,
-                size: 20.sp,
-              ),
-              onPressed: () {
-                Navigator.pop(context);
-              },
+          ),
+          title: Text(
+            'Privacy Policy',
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: 18.sp,
+              fontWeight: FontWeight.w600,
             ),
           ),
+          centerTitle: true,
         ),
-        title: Text(
-          'Privacy Policy',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        centerTitle: true,
-      ),
+        body: Consumer<LegalViewModel>(
+          builder: (context, viewModel, _) {
+            if (viewModel.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Account Management Section
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(16.w),
-                decoration: BoxDecoration(
-                  color: AppColors.secondaryGreen,
-                  borderRadius: BorderRadius.circular(16.r),
+            if (viewModel.errorMessage != null) {
+              return Center(
+                child: Text(
+                  "Error: ${viewModel.errorMessage}",
+                  style: const TextStyle(color: Colors.red),
+                  textAlign: TextAlign.center,
                 ),
+              );
+            }
+
+            final paragraphs = viewModel.privacyContent
+                .split('. ')
+                .where((s) => s.trim().isNotEmpty)
+                .toList();
+
+            return SingleChildScrollView(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("● Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-                      style: TextStyle(
-                        color: AppColors.black,
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w400,
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(16.w),
+                      decoration: BoxDecoration(
+                        color: AppColors.secondaryGreen,
+                        borderRadius: BorderRadius.circular(16.r),
                       ),
-                    ),
-                    SizedBox(height: 5.h),
-                    Text("● Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-                      style: TextStyle(
-                        color: AppColors.black,
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w400,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: paragraphs.map((para) {
+                          return Padding(
+                            padding: EdgeInsets.only(bottom: 8.h),
+                            child: Text(
+                              "● $para${para.endsWith('.') ? '' : '.'}",
+                              style: TextStyle(
+                                color: AppColors.black,
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w400,
+                                height: 1.5,
+                              ),
+                            ),
+                          );
+                        }).toList(),
                       ),
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

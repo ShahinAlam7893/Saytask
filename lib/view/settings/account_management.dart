@@ -84,12 +84,12 @@ class AccountManagementScreen extends StatelessWidget {
                       ),
                       child: Column(
                         children: [
-                          _buildMenuItem(
-                            title: 'About Us',
-                            onTap: () {context.push('/about_us');},
-                            isFirst: true,
-                          ),
-                          _buildDivider(),
+                          // _buildMenuItem(
+                          //   title: 'About Us',
+                          //   onTap: () {context.push('/about_us');},
+                          //   isFirst: true,
+                          // ),
+                          // _buildDivider(),
                           _buildMenuItem(
                             title: 'Change Password',
                             onTap: () {context.push('/update_password');},

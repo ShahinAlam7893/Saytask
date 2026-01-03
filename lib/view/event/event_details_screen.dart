@@ -164,15 +164,14 @@ class EventDetailsScreen extends StatelessWidget {
                 ),
                 SizedBox(height: 10.h),
 
+                // Reminder + Call Me (updated with natural text)
                 Row(
                   children: [
                     Icon(Icons.notifications, size: 18.sp, color: Colors.black),
                     SizedBox(width: 8.w),
                     Expanded(
                       child: Text(
-                        currentEvent.reminderMinutes > 0
-                            ? "Reminder ${currentEvent.reminderMinutes} minute${currentEvent.reminderMinutes == 1 ? '' : 's'} before"
-                            : "No reminder set",
+                        _formatReminderText(currentEvent.reminderMinutes),
                         style: GoogleFonts.inter(fontSize: 13.sp, color: Colors.black),
                       ),
                     ),
@@ -184,7 +183,11 @@ class EventDetailsScreen extends StatelessWidget {
                           SizedBox(width: 4.w),
                           Text(
                             "Call Me",
-                            style: GoogleFonts.inter(fontSize: 13.sp, color: AppColors.green, fontWeight: FontWeight.w600),
+                            style: GoogleFonts.inter(
+                              fontSize: 13.sp,
+                              color: AppColors.green,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ],
                       ),
@@ -223,5 +226,26 @@ class EventDetailsScreen extends StatelessWidget {
         );
       },
     );
+  }
+
+  String _formatReminderText(int minutes) {
+    if (minutes <= 0) return "No reminder set";
+
+    switch (minutes) {
+      case 5:
+        return "5 minutes before";
+      case 10:
+        return "10 minutes before";
+      case 15:
+        return "15 minutes before";
+      case 30:
+        return "30 minutes before";
+      case 60:
+        return "1 hour before";
+      case 120:
+        return "2 hours before";
+      default:
+        return "$minutes minutes before";
+    }
   }
 }

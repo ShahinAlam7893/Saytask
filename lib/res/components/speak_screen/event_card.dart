@@ -162,6 +162,7 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
           "event_datetime": startTimeStr,
           "start_time": startTimeStr,
           "end_time": endTimeStr,
+          "reminders": _buildReminders().isNotEmpty ? _buildReminders() : [],
           "location_address": cls.location ?? "",
         });
 

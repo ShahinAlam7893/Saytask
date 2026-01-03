@@ -30,6 +30,15 @@ class _EventEditScreenState extends State<EventEditScreen> {
   String _currentTimeText = "Loading...";
   bool _isSaving = false;
 
+  final List<String> _reminderOptions = [
+    '5 min before',
+    '10 min before',
+    '15 min before',
+    '30 min before',
+    '1 hr before',
+    '2 hr before',
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -46,9 +55,7 @@ class _EventEditScreenState extends State<EventEditScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _currentTimeText = TimeOfDay.fromDateTime(
-      _selectedDateTime,
-    ).format(context);
+    _currentTimeText = TimeOfDay.fromDateTime(_selectedDateTime).format(context);
   }
 
   @override
@@ -100,14 +107,6 @@ class _EventEditScreenState extends State<EventEditScreen> {
   }
 
   Future<String?> _pickReminder() async {
-    final options = [
-      '5 min before',
-      '10 min before',
-      '30 min before',
-      '1 hr before',
-      '2 hr before',
-    ];
-
     return showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -124,9 +123,9 @@ class _EventEditScreenState extends State<EventEditScreen> {
           width: double.maxFinite,
           child: ListView.builder(
             shrinkWrap: true,
-            itemCount: options.length,
+            itemCount: _reminderOptions.length,
             itemBuilder: (_, i) {
-              final text = options[i];
+              final text = _reminderOptions[i];
               final minutes = text.contains('hr')
                   ? int.parse(text.split(' ')[0]) * 60
                   : int.parse(text.split(' ')[0]);
@@ -159,9 +158,7 @@ class _EventEditScreenState extends State<EventEditScreen> {
     return _titleController.text.trim() != widget.event.title ||
         _descriptionController.text.trim() != widget.event.description ||
         _locationController.text.trim() != widget.event.locationAddress ||
-        !_selectedDateTime.isAtSameMomentAs(
-          widget.event.eventDateTime ?? DateTime.now(),
-        ) ||
+        !_selectedDateTime.isAtSameMomentAs(widget.event.eventDateTime ?? DateTime.now()) ||
         _currentReminderMinutes != widget.event.reminderMinutes ||
         _currentCallMe != widget.event.callMe;
   }
@@ -171,9 +168,9 @@ class _EventEditScreenState extends State<EventEditScreen> {
 
     final title = _titleController.text.trim();
     if (title.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Title cannot be empty')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Title cannot be empty')),
+      );
       return;
     }
 
@@ -195,7 +192,7 @@ class _EventEditScreenState extends State<EventEditScreen> {
       if (mounted) {
         TopSnackBar.show(
           context,
-          message: "✅ Event updated successfully",
+          message: "Event updated successfully",
           backgroundColor: Colors.green[700]!,
         );
         context.pop();
@@ -204,7 +201,7 @@ class _EventEditScreenState extends State<EventEditScreen> {
       if (mounted) {
         TopSnackBar.show(
           context,
-          message: "❌ Failed to update: $e",
+          message: "Failed to update: $e",
           backgroundColor: Colors.red[700]!,
         );
       }
@@ -223,10 +220,7 @@ class _EventEditScreenState extends State<EventEditScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: AppColors.black),
-            ),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.black)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -247,7 +241,7 @@ class _EventEditScreenState extends State<EventEditScreen> {
       if (mounted) {
         TopSnackBar.show(
           context,
-          message: "✅ Event deleted",
+          message: "Event deleted",
           backgroundColor: Colors.green[700]!,
         );
         context.pop();
@@ -256,7 +250,7 @@ class _EventEditScreenState extends State<EventEditScreen> {
       if (mounted) {
         TopSnackBar.show(
           context,
-          message: "❌ Failed to delete: $e",
+          message: "Failed to delete: $e",
           backgroundColor: Colors.red[700]!,
         );
       }
@@ -270,28 +264,21 @@ class _EventEditScreenState extends State<EventEditScreen> {
     return Scaffold(
       backgroundColor: AppColors.white,
       appBar: AppBar(
-        backgroundColor: AppColors.white,
+        backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_outlined),
+          color: AppColors.black,
           onPressed: () async {
             if (_hasChanges()) {
               final save = await showDialog<bool>(
                 context: context,
                 builder: (ctx) => AlertDialog(
                   title: const Text('Unsaved Changes'),
-                  content: const Text(
-                    'Do you want to save changes before leaving?',
-                  ),
+                  content: const Text('Do you want to save changes before leaving?'),
                   actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('Discard'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text('Save'),
-                    ),
+                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Discard')),
+                    TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
                   ],
                 ),
               );
@@ -303,10 +290,7 @@ class _EventEditScreenState extends State<EventEditScreen> {
             if (mounted) context.pop();
           },
         ),
-        title: const Text(
-          'Edit Event',
-          style: TextStyle(color: AppColors.black, fontFamily: 'Poppins'),
-        ),
+        title: const Text('Edit Event', style: TextStyle(color: AppColors.black, fontFamily: 'Poppins')),
         centerTitle: true,
       ),
       body: Stack(
@@ -322,23 +306,14 @@ class _EventEditScreenState extends State<EventEditScreen> {
                     hintText: 'Event Title',
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8.r),
-                      borderSide: const BorderSide(
-                        color: Colors.grey,
-                        width: 1.5,
-                      ),
+                      borderSide: const BorderSide(color: Colors.grey, width: 1.5),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8.r),
-                      borderSide: const BorderSide(
-                        color: AppColors.green,
-                        width: 2.0,
-                      ),
+                      borderSide: const BorderSide(color: AppColors.green, width: 2.0),
                     ),
                   ),
-                  style: TextStyle(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 16.h),
 
@@ -350,22 +325,13 @@ class _EventEditScreenState extends State<EventEditScreen> {
                     hintStyle: TextStyle(color: Colors.grey[600]),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10.r),
-                      borderSide: const BorderSide(
-                        color: Colors.grey,
-                        width: 1.5,
-                      ),
+                      borderSide: const BorderSide(color: Colors.grey, width: 1.5),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10.r),
-                      borderSide: const BorderSide(
-                        color: AppColors.green,
-                        width: 2.0,
-                      ),
+                      borderSide: const BorderSide(color: AppColors.green, width: 2.0),
                     ),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 12.w,
-                      vertical: 10.h,
-                    ),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
                   ),
                   cursorColor: AppColors.green,
                   style: TextStyle(fontSize: 14.sp),
@@ -379,22 +345,13 @@ class _EventEditScreenState extends State<EventEditScreen> {
                     hintStyle: TextStyle(color: Colors.grey[600]),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10.r),
-                      borderSide: const BorderSide(
-                        color: Colors.grey,
-                        width: 1.5,
-                      ),
+                      borderSide: const BorderSide(color: Colors.grey, width: 1.5),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10.r),
-                      borderSide: const BorderSide(
-                        color: AppColors.green,
-                        width: 2.0,
-                      ),
+                      borderSide: const BorderSide(color: AppColors.green, width: 2.0),
                     ),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 12.w,
-                      vertical: 10.h,
-                    ),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
                   ),
                   cursorColor: AppColors.green,
                   style: TextStyle(fontSize: 14.sp),
@@ -405,13 +362,7 @@ class _EventEditScreenState extends State<EventEditScreen> {
                   children: [
                     const Icon(Icons.schedule, color: AppColors.green),
                     SizedBox(width: 8.w),
-                    Text(
-                      'Schedule',
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    Text('Schedule', style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold)),
                   ],
                 ),
                 SizedBox(height: 8.h),
@@ -421,40 +372,23 @@ class _EventEditScreenState extends State<EventEditScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Date',
-                            style: TextStyle(
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                          Text('Date', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600)),
                           SizedBox(height: 6.h),
                           GestureDetector(
                             onTap: _pickDate,
                             child: AbsorbPointer(
                               child: TextField(
                                 decoration: InputDecoration(
-                                  hintText: DateFormat(
-                                    'MMMM d, yyyy',
-                                  ).format(_selectedDateTime),
+                                  hintText: DateFormat('MMMM d, yyyy').format(_selectedDateTime),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(24.r),
-                                    borderSide: const BorderSide(
-                                      color: Colors.grey,
-                                      width: 1.5,
-                                    ),
+                                    borderSide: const BorderSide(color: Colors.grey, width: 1.5),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(24.r),
-                                    borderSide: const BorderSide(
-                                      color: AppColors.green,
-                                      width: 2.0,
-                                    ),
+                                    borderSide: const BorderSide(color: AppColors.green, width: 2.0),
                                   ),
-                                  contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 12.w,
-                                    vertical: 10.h,
-                                  ),
+                                  contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
                                 ),
                               ),
                             ),
@@ -467,13 +401,7 @@ class _EventEditScreenState extends State<EventEditScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Time',
-                            style: TextStyle(
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                          Text('Time', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600)),
                           SizedBox(height: 6.h),
                           GestureDetector(
                             onTap: _pickTime,
@@ -483,22 +411,13 @@ class _EventEditScreenState extends State<EventEditScreen> {
                                   hintText: _currentTimeText,
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(24.r),
-                                    borderSide: const BorderSide(
-                                      color: Colors.grey,
-                                      width: 1.5,
-                                    ),
+                                    borderSide: const BorderSide(color: Colors.grey, width: 1.5),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(24.r),
-                                    borderSide: const BorderSide(
-                                      color: AppColors.green,
-                                      width: 2.0,
-                                    ),
+                                    borderSide: const BorderSide(color: AppColors.green, width: 2.0),
                                   ),
-                                  contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 12.w,
-                                    vertical: 10.h,
-                                  ),
+                                  contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
                                 ),
                               ),
                             ),
@@ -512,18 +431,9 @@ class _EventEditScreenState extends State<EventEditScreen> {
 
                 Row(
                   children: [
-                    const Icon(
-                      Icons.notifications_none,
-                      color: AppColors.green,
-                    ),
+                    const Icon(Icons.notifications_none, color: AppColors.green),
                     SizedBox(width: 8.w),
-                    Text(
-                      'Reminders',
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    Text('Reminders', style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold)),
                   ],
                 ),
                 SizedBox(height: 8.h),
@@ -533,17 +443,10 @@ class _EventEditScreenState extends State<EventEditScreen> {
                   child: _currentReminderMinutes == 0
                       ? Text(
                           'No reminders set',
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            color: Colors.grey[600],
-                            fontStyle: FontStyle.italic,
-                          ),
+                          style: TextStyle(fontSize: 14.sp, color: Colors.grey[600], fontStyle: FontStyle.italic),
                         )
                       : Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 10.w,
-                            vertical: 6.h,
-                          ),
+                          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFBFBFB),
                             borderRadius: BorderRadius.circular(32.r),
@@ -566,38 +469,25 @@ class _EventEditScreenState extends State<EventEditScreen> {
                               Container(
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFEF9937),
-                                  border: Border.all(
-                                    color: Colors.grey.shade400,
-                                    width: 1,
-                                  ),
+                                  border: Border.all(color: Colors.grey.shade400, width: 1),
                                   borderRadius: BorderRadius.circular(12.r),
                                 ),
                                 child: IconButton(
-                                  icon: const Icon(
-                                    Icons.notifications_none,
-                                    color: Colors.white,
-                                  ),
+                                  icon: const Icon(Icons.notifications_none, color: Colors.white),
                                   onPressed: () {},
                                 ),
                               ),
                               IconButton(
                                 icon: Icon(
                                   Icons.wifi_calling_3_outlined,
-                                  color: _currentCallMe
-                                      ? AppColors.green
-                                      : Colors.grey,
+                                  color: _currentCallMe ? AppColors.green : Colors.grey,
                                 ),
                                 onPressed: () {
-                                  setState(
-                                    () => _currentCallMe = !_currentCallMe,
-                                  );
+                                  setState(() => _currentCallMe = !_currentCallMe);
                                 },
                               ),
                               IconButton(
-                                icon: const Icon(
-                                  Icons.close,
-                                  color: Colors.red,
-                                ),
+                                icon: const Icon(Icons.close, color: Colors.red),
                                 onPressed: () {
                                   setState(() {
                                     _currentReminderMinutes = 0;
@@ -624,23 +514,13 @@ class _EventEditScreenState extends State<EventEditScreen> {
                   icon: const Icon(Icons.add, color: AppColors.black),
                   label: Text(
                     'Add Reminder',
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      color: AppColors.black,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(fontSize: 14.sp, color: AppColors.black, fontWeight: FontWeight.w600),
                   ),
                   style: TextButton.styleFrom(
                     backgroundColor: AppColors.white,
                     shape: const StadiumBorder(),
-                    side: BorderSide(
-                      color: AppColors.secondaryTextColor,
-                      width: 1.0,
-                    ),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 16.w,
-                      vertical: 8.h,
-                    ),
+                    side: BorderSide(color: AppColors.secondaryTextColor, width: 1.0),
+                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                   ),
                 ),
                 SizedBox(height: 16.h),
@@ -651,47 +531,23 @@ class _EventEditScreenState extends State<EventEditScreen> {
                     TextButton.icon(
                       onPressed: _isSaving ? null : _deleteEvent,
                       icon: const Icon(Icons.delete, color: AppColors.red),
-                      label: Text(
-                        'Delete',
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          color: AppColors.black,
-                        ),
-                      ),
+                      label: Text('Delete', style: TextStyle(fontSize: 14.sp, color: AppColors.black)),
                       style: TextButton.styleFrom(
                         backgroundColor: AppColors.white,
                         shape: const StadiumBorder(),
-                        side: BorderSide(
-                          color: AppColors.secondaryTextColor,
-                          width: 1.0,
-                        ),
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 50.w,
-                          vertical: 8.h,
-                        ),
+                        side: BorderSide(color: AppColors.secondaryTextColor, width: 1.0),
+                        padding: EdgeInsets.symmetric(horizontal: 50.w, vertical: 8.h),
                       ),
                     ),
                     TextButton.icon(
                       onPressed: _isSaving ? null : _saveChanges,
                       icon: const Icon(Icons.done, color: AppColors.green),
-                      label: Text(
-                        'Save',
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          color: AppColors.black,
-                        ),
-                      ),
+                      label: Text('Save', style: TextStyle(fontSize: 14.sp, color: AppColors.black)),
                       style: TextButton.styleFrom(
                         backgroundColor: AppColors.white,
                         shape: const StadiumBorder(),
-                        side: BorderSide(
-                          color: AppColors.secondaryTextColor,
-                          width: 1.0,
-                        ),
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 50.w,
-                          vertical: 8.h,
-                        ),
+                        side: BorderSide(color: AppColors.secondaryTextColor, width: 1.0),
+                        padding: EdgeInsets.symmetric(horizontal: 50.w, vertical: 8.h),
                       ),
                     ),
                   ],

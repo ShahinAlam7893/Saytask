@@ -343,7 +343,6 @@ class _HomeScreenState extends State<HomeScreen>
           children: [
             Column(
               children: [
-                // Search Bar with Submit Button
                 Padding(
                   padding: EdgeInsets.only(
                     top: 50.h,
@@ -616,8 +615,6 @@ class _HomeScreenState extends State<HomeScreen>
               ],
             ),
 
-            // Processing overlay
-            // Processing overlay (without dark background)
             if (_isProcessing)
               Center(
                 child: Column(

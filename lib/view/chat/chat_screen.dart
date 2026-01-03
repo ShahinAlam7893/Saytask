@@ -149,12 +149,11 @@ class _ChatPageState extends State<ChatPage> {
                           ),
                         );
                       }
-
+        
                       final messageIndex = vm.isTyping ? index - 1 : index;
-                      final reversedIndex =
-                          vm.messages.length - 1 - messageIndex;
+                      final reversedIndex = vm.messages.length - 1 - messageIndex;
                       final msg = vm.messages[reversedIndex];
-
+        
                       if (msg.type == MessageType.event ||
                           msg.type == MessageType.task) {
                         return _EventTaskCard(
@@ -163,7 +162,7 @@ class _ChatPageState extends State<ChatPage> {
                           onUpdate: _refreshProvidersAfterAIResponse,
                         );
                       }
-
+        
                       if (msg.message.isNotEmpty) {
                         return Align(
                           alignment: msg.type == MessageType.user
@@ -229,7 +228,7 @@ class _ChatPageState extends State<ChatPage> {
                     ),
                   ),
                   SizedBox(width: 8.w),
-
+        
                   // GestureDetector(
                   //   onTap: _isListening ? _stopListening : _startListening,
                   //   child: CircleAvatar(
@@ -242,25 +241,25 @@ class _ChatPageState extends State<ChatPage> {
                   //   ),
                   // ),
                   // SizedBox(width: 8.w),
+        
                   ValueListenableBuilder<TextEditingValue>(
                     valueListenable: _controller,
                     builder: (context, value, child) {
                       final bool isEmpty = value.text.trim().isEmpty;
                       final bool isTyping = context.select<ChatViewModel, bool>(
-                        (vm) => vm.isTyping,
-                      );
+                          (vm) => vm.isTyping);
                       final bool isDisabled = isEmpty || isTyping;
-
+        
                       return GestureDetector(
                         onTap: isDisabled ? null : _sendMessage,
                         child: CircleAvatar(
                           radius: 25.r,
-                          backgroundColor: isDisabled
-                              ? Colors.grey[400]
-                              : Colors.green,
+                          backgroundColor:
+                              isDisabled ? Colors.grey[400] : Colors.green,
                           child: Icon(
                             TablerIcons.send,
-                            color: isDisabled ? Colors.grey[600] : Colors.white,
+                            color:
+                                isDisabled ? Colors.grey[600] : Colors.white,
                           ),
                         ),
                       );
@@ -313,11 +312,8 @@ class _EventTaskCardState extends State<_EventTaskCard> {
     _isEditing = false;
     _selectedReminder = widget.message.notification ?? "At time of event";
     _eventTime =
-        widget.message.eventTime ??
-        DateTime.now().add(const Duration(hours: 1));
-    _titleController = TextEditingController(
-      text: widget.message.eventTitle ?? "",
-    );
+        widget.message.eventTime ?? DateTime.now().add(const Duration(hours: 1));
+    _titleController = TextEditingController(text: widget.message.eventTitle ?? "");
     _noteController = TextEditingController(text: widget.message.note ?? "");
 
     _callMeController.addListener(_onCallMeChanged);
@@ -535,29 +531,28 @@ class _EventTaskCardState extends State<_EventTaskCard> {
                             value: _selectedReminder,
                             dropdownColor: Colors.grey[850],
                             icon: const SizedBox.shrink(),
-                            items:
-                                [
-                                  "At time of event",
-                                  "5 minutes before",
-                                  "10 minutes before",
-                                  "15 minutes before",
-                                  "30 minutes before",
-                                  "1 hour before",
-                                  "2 hours before",
-                                  "13:00, 1 day before",
-                                  "None",
-                                ].map((e) {
-                                  return DropdownMenuItem(
-                                    value: e,
-                                    child: Text(
-                                      e,
-                                      style: TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 14.sp,
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
+                            items: [
+                              "At time of event",
+                              "5 minutes before",
+                              "10 minutes before",
+                              "15 minutes before",
+                              "30 minutes before",
+                              "1 hour before",
+                              "2 hours before",
+                              "13:00, 1 day before",
+                              "None",
+                            ].map((e) {
+                              return DropdownMenuItem(
+                                value: e,
+                                child: Text(
+                                  e,
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 14.sp,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
                             onChanged: (val) {
                               if (val != null) {
                                 setState(() => _selectedReminder = val);
@@ -638,9 +633,7 @@ class _EventTaskCardState extends State<_EventTaskCard> {
                 children: [
                   IconButton(
                     onPressed: () {
-                      context.read<ChatViewModel>().deleteMessage(
-                        widget.message,
-                      );
+                      context.read<ChatViewModel>().deleteMessage(widget.message);
                       TopSnackBar.show(
                         context,
                         message: 'Item removed from chat',

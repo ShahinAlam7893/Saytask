@@ -22,14 +22,12 @@ class SmoothNavigationWrapper extends StatefulWidget {
   const SmoothNavigationWrapper({super.key, this.child, this.initialIndex = 0});
 
   @override
-  State<SmoothNavigationWrapper> createState() =>
-      _SmoothNavigationWrapperState();
+  State<SmoothNavigationWrapper> createState() => _SmoothNavigationWrapperState();
 }
 
 class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
   late PageController _pageController;
   late int _currentIndex;
-  late ValueNotifier<bool> _isRecordingNotifier;
 
   List<Widget> get _pages => const [
     HomeScreen(),
@@ -45,7 +43,6 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
     super.initState();
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: _currentIndex);
-    _isRecordingNotifier = ValueNotifier<bool>(false);
   }
 
   @override
@@ -61,7 +58,6 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
   @override
   void dispose() {
     _pageController.dispose();
-    _isRecordingNotifier.dispose();
     super.dispose();
   }
 
@@ -74,12 +70,17 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
     if (index == 2) {
       final speech = context.read<SpeechProvider>();
 
-      if (_isRecordingNotifier.value) {
+      if (speech.isListening) {
         await speech.stopListening();
-        _isRecordingNotifier.value = false;
       } else {
         final started = await speech.startListening();
-        _isRecordingNotifier.value = started;
+        if (!started && mounted) {
+          TopSnackBar.show(
+            context,
+            message: "Could not start recording. Check microphone permission.",
+            backgroundColor: Colors.orange[700]!,
+          );
+        }
       }
       HapticFeedback.mediumImpact();
       return;
@@ -94,7 +95,6 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
 
     setState(() {
       _currentIndex = realPageIndex;
-      _isRecordingNotifier.value = false;
     });
     _pageController.jumpToPage(realPageIndex);
   }
@@ -104,9 +104,7 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
     final isSinglePage = widget.child != null;
 
     return Theme(
-      data: Theme.of(
-        context,
-      ).copyWith(scaffoldBackgroundColor: AppColors.white),
+      data: Theme.of(context).copyWith(scaffoldBackgroundColor: AppColors.white),
       child: Scaffold(
         body: Stack(
           children: [
@@ -119,23 +117,9 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
                     children: _pages,
                   ),
 
-            ValueListenableBuilder<bool>(
-              valueListenable: _isRecordingNotifier,
-              builder: (context, isRecording, child) {
-                if (!isRecording) return const SizedBox.shrink();
-                return Positioned.fill(
-                  child: IgnorePointer(
-                    child: Container(color: Colors.red.withOpacity(0.05)),
-                  ),
-                );
-              },
-            ),
-
-            // VOICE CARD + SAVE TO BACKEND
             Consumer<SpeechProvider>(
               builder: (context, speech, child) {
-                if (!speech.shouldShowCard ||
-                    speech.lastClassification == null) {
+                if (!speech.shouldShowCard || speech.lastClassification == null) {
                   return const SizedBox.shrink();
                 }
 
@@ -163,41 +147,30 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
                                       color: Colors.white,
                                       shape: BoxShape.circle,
                                     ),
-                                    child: const Icon(
-                                      Icons.close,
-                                      color: Colors.black,
-                                    ),
+                                    child: const Icon(Icons.close, color: Colors.black),
                                   ),
                                 ),
                               ),
-
                               SpeackEventCard(
                                 onSave: () async {
-                                  final cls = speech.lastClassification!;
-
                                   try {
-                                    await VoiceActionRepository()
-                                        .saveVoiceAction(cls);
+                                    await VoiceActionRepository().saveVoiceAction(cls);
 
                                     if (cls.type == 'task') {
                                       context.read<TaskProvider>().loadTasks();
                                     } else if (cls.type == 'event') {
-                                      context
-                                          .read<CalendarProvider>()
-                                          .loadEvents();
+                                      context.read<CalendarProvider>().loadEvents();
                                     } else {
                                       context.read<NotesProvider>().loadNotes();
                                     }
 
                                     TopSnackBar.show(
                                       context,
-                                      message:
-                                          "${cls.type.toUpperCase()} saved successfully!",
+                                      message: "${cls.type.toUpperCase()} saved successfully!",
                                       backgroundColor: Colors.green[700]!,
                                       duration: const Duration(seconds: 3),
                                     );
                                   } catch (e) {
-                                    // ← REPLACED
                                     TopSnackBar.show(
                                       context,
                                       message: "Failed to save: $e",
@@ -244,19 +217,9 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildNavItem(0, Icons.home_outlined, Icons.home, 'Home'),
-              _buildNavItem(
-                1,
-                Icons.access_time_rounded,
-                Icons.access_time_rounded,
-                'Today',
-              ),
+              _buildNavItem(1, Icons.access_time_rounded, Icons.access_time_rounded, 'Today'),
               _buildNavItem(2, Icons.mic, Icons.mic, 'Speak', isMic: true),
-              _buildNavItem(
-                3,
-                Icons.event_note_outlined,
-                Icons.event_note,
-                'Calendar',
-              ),
+              _buildNavItem(3, Icons.event_note_outlined, Icons.event_note, 'Calendar'),
               _buildNavItem(4, Icons.edit, Icons.edit, 'Notes'),
             ],
           ),
@@ -273,9 +236,10 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
     bool isMic = false,
   }) {
     if (isMic) {
-      return ValueListenableBuilder<bool>(
-        valueListenable: _isRecordingNotifier,
-        builder: (context, isRecording, child) {
+      return Consumer<SpeechProvider>(
+        builder: (context, speech, child) {
+          final bool isRecording = speech.isListening;
+
           return InkWell(
             onTap: () => _onTabTapped(index),
             borderRadius: BorderRadius.circular(30),
@@ -286,8 +250,7 @@ class _SmoothNavigationWrapperState extends State<SmoothNavigationWrapper> {
                 color: isRecording ? Colors.red : AppColors.green,
                 boxShadow: [
                   BoxShadow(
-                    color: (isRecording ? Colors.red : AppColors.green)
-                        .withOpacity(0.3),
+                    color: (isRecording ? Colors.red : AppColors.green).withOpacity(0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),

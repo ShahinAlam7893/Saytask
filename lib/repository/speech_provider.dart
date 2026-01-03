@@ -133,6 +133,7 @@ class SpeechProvider with ChangeNotifier {
 
   bool _isReady = false;
   bool _isListening = false;
+  bool get isGloballyRecording => _isListening;
   String _text = '';
   double _confidence = 0.0;
   String _localeId = 'en_US';
@@ -237,6 +238,11 @@ class SpeechProvider with ChangeNotifier {
     await _classifyAndTriggerCard(_text.trim());
   }
 
+Future<void> forceStopListening() async {
+    await stopListening();
+  }
+
+  
   Future<void> _classifyAndTriggerCard(String message) async {
     _isClassifying = true;
     notifyListeners();

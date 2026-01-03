@@ -6,8 +6,8 @@ import 'package:intl/intl.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
 import 'package:saytask/model/chat_model.dart';
-import 'package:saytask/repository/chat_service.dart';
 import 'package:saytask/repository/calendar_service.dart';
+import 'package:saytask/repository/chat_service.dart';
 import 'package:saytask/repository/today_task_service.dart';
 import 'package:saytask/repository/notes_service.dart';
 import 'package:saytask/res/color.dart';
@@ -26,6 +26,7 @@ class _ChatPageState extends State<ChatPage> {
   final FocusNode _focusNode = FocusNode();
   late stt.SpeechToText _speech;
   bool _isListening = false;
+
   @override
   void initState() {
     super.initState();
@@ -62,7 +63,6 @@ class _ChatPageState extends State<ChatPage> {
     context.read<CalendarProvider>().loadEvents();
     context.read<TaskProvider>().loadTasks();
     context.read<NotesProvider>().loadNotes();
-    debugPrint('✅ Providers refreshed');
   }
 
   Future<void> _sendMessage() async {
@@ -109,148 +109,169 @@ class _ChatPageState extends State<ChatPage> {
         ),
         centerTitle: true,
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: Consumer<ChatViewModel>(
-              builder: (context, vm, _) {
-                if (vm.isLoading && vm.messages.isEmpty) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                return ListView.builder(
-                  reverse: true,
-                  padding: EdgeInsets.all(12.w),
-                  // KEY CHANGE: Add +1 if typing to show typing bubble as extra item
-                  itemCount: vm.messages.length + (vm.isTyping ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    // NEW: If typing and this is the newest item (index == 0), show typing indicator
-                    if (vm.isTyping && index == 0) {
-                      return Align(
-                        alignment: Alignment.centerLeft,
-                        child: Padding(
-                          padding: EdgeInsets.only(
-                            left: 12.w,
-                            bottom: 8.h,
-                            top: 8.h,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: Consumer<ChatViewModel>(
+                builder: (context, vm, _) {
+                  if (vm.isLoading && vm.messages.isEmpty) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  return ListView.builder(
+                    reverse: true,
+                    padding: EdgeInsets.all(12.w),
+                    itemCount: vm.messages.length + (vm.isTyping ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (vm.isTyping && index == 0) {
+                        return Align(
+                          alignment: Alignment.centerLeft,
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                              left: 12.w,
+                              bottom: 8.h,
+                              top: 8.h,
+                            ),
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 6.w,
+                                vertical: 3.h,
+                              ),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12.r),
+                              ),
+                              child: Lottie.asset(
+                                'assets/animations/Chat typing indicator.json',
+                                width: 60.w,
+                                repeat: true,
+                              ),
+                            ),
                           ),
+                        );
+                      }
+
+                      final messageIndex = vm.isTyping ? index - 1 : index;
+                      final reversedIndex =
+                          vm.messages.length - 1 - messageIndex;
+                      final msg = vm.messages[reversedIndex];
+
+                      if (msg.type == MessageType.event ||
+                          msg.type == MessageType.task) {
+                        return _EventTaskCard(
+                          key: ValueKey(msg.messageId ?? reversedIndex),
+                          message: msg,
+                          onUpdate: _refreshProvidersAfterAIResponse,
+                        );
+                      }
+
+                      if (msg.message.isNotEmpty) {
+                        return Align(
+                          alignment: msg.type == MessageType.user
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
                           child: Container(
                             padding: EdgeInsets.symmetric(
-                              horizontal: 6.w,
-                              vertical: 3.h,
+                              vertical: 10.h,
+                              horizontal: 16.w,
                             ),
+                            margin: EdgeInsets.symmetric(vertical: 4.h),
                             decoration: BoxDecoration(
-                              // color: AppColors.secondaryTextColor,
+                              color: msg.type == MessageType.user
+                                  ? Colors.green
+                                  : AppColors.secondaryTextColor,
                               borderRadius: BorderRadius.circular(12.r),
                             ),
-                            child: Lottie.asset(
-                              'assets/animations/Chat typing indicator.json',
-                              width: 60.w,
-                              repeat: true,
+                            child: Text(
+                              msg.message,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14.sp,
+                              ),
                             ),
+                          ),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  );
+                },
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.all(8.w),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      focusNode: _focusNode,
+                      decoration: InputDecoration(
+                        hintText: 'Write your question here',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(25.r),
+                          borderSide: const BorderSide(color: Colors.grey),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(25.r),
+                          borderSide: const BorderSide(color: Colors.green),
+                        ),
+                        contentPadding: EdgeInsets.symmetric(
+                          vertical: 10.h,
+                          horizontal: 16.w,
+                        ),
+                      ),
+                      onSubmitted: (_) {
+                        if (_controller.text.trim().isNotEmpty &&
+                            !context.read<ChatViewModel>().isTyping) {
+                          _sendMessage();
+                        }
+                      },
+                    ),
+                  ),
+                  SizedBox(width: 8.w),
+
+                  // GestureDetector(
+                  //   onTap: _isListening ? _stopListening : _startListening,
+                  //   child: CircleAvatar(
+                  //     radius: 25.r,
+                  //     backgroundColor: Colors.blue,
+                  //     child: Icon(
+                  //       _isListening ? Icons.mic_off : Icons.mic,
+                  //       color: Colors.white,
+                  //     ),
+                  //   ),
+                  // ),
+                  // SizedBox(width: 8.w),
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _controller,
+                    builder: (context, value, child) {
+                      final bool isEmpty = value.text.trim().isEmpty;
+                      final bool isTyping = context.select<ChatViewModel, bool>(
+                        (vm) => vm.isTyping,
+                      );
+                      final bool isDisabled = isEmpty || isTyping;
+
+                      return GestureDetector(
+                        onTap: isDisabled ? null : _sendMessage,
+                        child: CircleAvatar(
+                          radius: 25.r,
+                          backgroundColor: isDisabled
+                              ? Colors.grey[400]
+                              : Colors.green,
+                          child: Icon(
+                            TablerIcons.send,
+                            color: isDisabled ? Colors.grey[600] : Colors.white,
                           ),
                         ),
                       );
-                    }
-
-                    final messageIndex = vm.isTyping ? index - 1 : index;
-                    final reversedIndex = vm.messages.length - 1 - messageIndex;
-                    final msg = vm.messages[reversedIndex];
-
-                    if (msg.type == MessageType.event ||
-                        msg.type == MessageType.task) {
-                      return _EventTaskCard(
-                        key: ValueKey(msg.messageId ?? reversedIndex),
-                        message: msg,
-                        onUpdate: _refreshProvidersAfterAIResponse,
-                      );
-                    }
-
-                    if (msg.message.isNotEmpty) {
-                      return Align(
-                        alignment: msg.type == MessageType.user
-                            ? Alignment.centerRight
-                            : Alignment.centerLeft,
-                        child: Container(
-                          padding: EdgeInsets.symmetric(
-                            vertical: 10.h,
-                            horizontal: 16.w,
-                          ),
-                          margin: EdgeInsets.symmetric(vertical: 4.h),
-                          decoration: BoxDecoration(
-                            color: msg.type == MessageType.user
-                                ? Colors.green
-                                : AppColors.secondaryTextColor,
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                          child: Text(
-                            msg.message,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 14.sp,
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-
-                    return const SizedBox.shrink();
-                  },
-                );
-              },
+                    },
+                  ),
+                ],
+              ),
             ),
-          ),
-          Padding(
-            padding: EdgeInsets.all(8.w),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    focusNode: _focusNode,
-                    decoration: InputDecoration(
-                      hintText: 'Write your question here',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(25.r),
-                        borderSide: const BorderSide(color: Colors.grey),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(25.r),
-                        borderSide: const BorderSide(color: Colors.green),
-                      ),
-                      contentPadding: EdgeInsets.symmetric(
-                        vertical: 10.h,
-                        horizontal: 16.w,
-                      ),
-                    ),
-                    onSubmitted: (_) => _sendMessage(),
-                  ),
-                ),
-                SizedBox(width: 8.w),
-                GestureDetector(
-                  onTap: _isListening ? _stopListening : _startListening,
-                  child: CircleAvatar(
-                    radius: 25.r,
-                    backgroundColor: Colors.blue,
-                    child: Icon(
-                      _isListening ? Icons.mic_off : Icons.mic,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                SizedBox(width: 8.w),
-                GestureDetector(
-                  onTap: _sendMessage,
-                  child: CircleAvatar(
-                    radius: 25.r,
-                    backgroundColor: Colors.green,
-                    child: const Icon(TablerIcons.send, color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: 50.h),
-        ],
+            // SizedBox(height: 50.h),
+          ],
+        ),
       ),
     );
   }
@@ -263,9 +284,6 @@ class _ChatPageState extends State<ChatPage> {
   }
 }
 
-// ════════════════════════════════════════════════════════════════
-// STATEFUL EVENT/TASK CARD WITH FULL EDITING & DATABASE UPDATE
-// ════════════════════════════════════════════════════════════════
 class _EventTaskCard extends StatefulWidget {
   final ChatMessage message;
   final VoidCallback onUpdate;
@@ -286,6 +304,7 @@ class _EventTaskCardState extends State<_EventTaskCard> {
   late DateTime _eventTime;
   late TextEditingController _titleController;
   late TextEditingController _noteController;
+
   @override
   void initState() {
     super.initState();
@@ -300,7 +319,7 @@ class _EventTaskCardState extends State<_EventTaskCard> {
       text: widget.message.eventTitle ?? "",
     );
     _noteController = TextEditingController(text: widget.message.note ?? "");
-    // Listen to switch changes
+
     _callMeController.addListener(_onCallMeChanged);
   }
 
@@ -317,7 +336,6 @@ class _EventTaskCardState extends State<_EventTaskCard> {
     setState(() {});
   }
 
-  // ⭐ DELAY +1 HOUR
   void _delayOneHour() {
     setState(() {
       _eventTime = _eventTime.add(const Duration(hours: 1));
@@ -329,7 +347,6 @@ class _EventTaskCardState extends State<_EventTaskCard> {
     );
   }
 
-  // ⭐ SET CALL ME
   void _setCallMe() {
     _callMeController.value = true;
     TopSnackBar.show(
@@ -339,7 +356,6 @@ class _EventTaskCardState extends State<_EventTaskCard> {
     );
   }
 
-  // ⭐ SET REMINDER TO 30 MIN
   void _setReminder30Min() {
     setState(() {
       _selectedReminder = "30 minutes before";
@@ -351,11 +367,10 @@ class _EventTaskCardState extends State<_EventTaskCard> {
     );
   }
 
-  // ⭐ SAVE CHANGES TO DATABASE
   Future<void> _saveChanges() async {
     setState(() => _isEditing = false);
     final vm = context.read<ChatViewModel>();
-    // Update local message
+
     vm.editEventMessage(
       widget.message,
       newTitle: _titleController.text.trim(),
@@ -363,7 +378,7 @@ class _EventTaskCardState extends State<_EventTaskCard> {
       newNotification: _selectedReminder,
       newNote: _noteController.text.trim(),
     );
-    // Create updated message object
+
     final updatedMessage = ChatMessage(
       message: widget.message.message,
       type: widget.message.type,
@@ -376,8 +391,8 @@ class _EventTaskCardState extends State<_EventTaskCard> {
       note: _noteController.text.trim(),
       messageId: widget.message.messageId,
     );
+
     try {
-      // ⭐ SAVE TO DATABASE
       await vm.saveEditedMessage(updatedMessage);
       if (!mounted) return;
       TopSnackBar.show(
@@ -385,7 +400,6 @@ class _EventTaskCardState extends State<_EventTaskCard> {
         message: 'Changes saved to database',
         backgroundColor: Colors.green,
       );
-      // Refresh providers
       widget.onUpdate();
     } catch (e) {
       if (!mounted) return;
@@ -413,7 +427,6 @@ class _EventTaskCardState extends State<_EventTaskCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // TITLE ROW
             Row(
               children: [
                 Container(width: 4.w, height: 16.h, color: Colors.green),
@@ -460,7 +473,6 @@ class _EventTaskCardState extends State<_EventTaskCard> {
               ],
             ),
             SizedBox(height: 4.h),
-            // DATE & TIME ROW
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -479,7 +491,6 @@ class _EventTaskCardState extends State<_EventTaskCard> {
               ],
             ),
             SizedBox(height: 8.h),
-            // CALL ME SWITCH
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -506,7 +517,6 @@ class _EventTaskCardState extends State<_EventTaskCard> {
               ],
             ),
             SizedBox(height: 6.h),
-            // REMINDER DROPDOWN
             Row(
               children: [
                 Icon(
@@ -567,7 +577,6 @@ class _EventTaskCardState extends State<_EventTaskCard> {
               ],
             ),
             SizedBox(height: 8.h),
-            // NOTE/DESCRIPTION - Show only description or original user message
             Row(
               children: [
                 Icon(
@@ -605,7 +614,6 @@ class _EventTaskCardState extends State<_EventTaskCard> {
                 ),
               ],
             ),
-            // EXPANDED SECTION
             if (_isExpanded) ...[
               SizedBox(height: 12.h),
               Row(

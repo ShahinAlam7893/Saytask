@@ -13,7 +13,6 @@ class VoiceRecordProvider with ChangeNotifier {
     _isRecording = true;
     notifyListeners();
 
-    // Simulate recording delay
     Future.delayed(const Duration(seconds: 3), () {
       _isRecording = false;
       _noteContent =

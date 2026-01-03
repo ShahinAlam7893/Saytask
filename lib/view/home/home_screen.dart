@@ -33,7 +33,6 @@ class _HomeScreenState extends State<HomeScreen>
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
-  bool isRecording = false;
   String? _selectedFileName;
   File? _selectedFile;
   bool _isProcessing = false;
@@ -287,23 +286,23 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  // ⭐ MIC TAP
   Future<void> _onMicTap() async {
     final speech = context.read<SpeechProvider>();
 
-    if (isRecording) {
+    if (speech.isListening) {
+      // Stop listening
       await speech.stopListening();
       _showRecordingCompleteDialog(context);
     } else {
+      // Start listening
       final started = await speech.startListening();
       if (!started) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Cannot start speech recognition')),
         );
       }
     }
-
-    setState(() => isRecording = !isRecording);
   }
 
   @override
@@ -415,7 +414,7 @@ class _HomeScreenState extends State<HomeScreen>
                           onSubmitted: (_) => _processTextInput(),
                         ),
                       ),
-        
+
                       // File name display & Submit button
                       if (_selectedFileName != null ||
                           _searchController.text.isNotEmpty) ...[
@@ -499,7 +498,7 @@ class _HomeScreenState extends State<HomeScreen>
                     ],
                   ),
                 ),
-        
+
                 // Mic Section
                 Expanded(
                   child: Center(
@@ -515,12 +514,14 @@ class _HomeScreenState extends State<HomeScreen>
                               width: 160.w,
                               height: 160.w,
                               decoration: BoxDecoration(
-                                color: isRecording ? Colors.red : AppColors.green,
+                                color: speech.isListening
+                                    ? Colors.red
+                                    : AppColors.green,
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
                                     color:
-                                        (isRecording
+                                        (speech.isListening
                                                 ? Colors.red
                                                 : AppColors.green)
                                             .withOpacity(0.4),
@@ -531,7 +532,7 @@ class _HomeScreenState extends State<HomeScreen>
                                 ],
                               ),
                               child: Icon(
-                                isRecording ? Icons.stop : Icons.mic,
+                                speech.isListening ? Icons.stop : Icons.mic,
                                 color: Colors.white,
                                 size: 60.sp,
                               ),
@@ -559,13 +560,13 @@ class _HomeScreenState extends State<HomeScreen>
                             ],
                           ),
                         ),
-        
+
                         // Live Text / Hint
                         SizedBox(
                           height: 60.h,
                           child: AnimatedSwitcher(
                             duration: const Duration(milliseconds: 300),
-                            child: isRecording
+                            child: speech.isListening
                                 ? Padding(
                                     padding: EdgeInsets.symmetric(
                                       horizontal: 20.w,
@@ -614,7 +615,7 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
               ],
             ),
-        
+
             // Processing overlay
             // Processing overlay (without dark background)
             if (_isProcessing)

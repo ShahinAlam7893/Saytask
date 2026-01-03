@@ -108,7 +108,6 @@ class AccountManagementScreen extends StatelessWidget {
               ),
               SizedBox(height: 24.h),
 
-              // Legal Section
               Container(
                 width: double.infinity,
                 padding: EdgeInsets.all(16.w),

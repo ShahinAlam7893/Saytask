@@ -9,12 +9,15 @@ import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:saytask/core/api_endpoints.dart';
 import 'package:saytask/service/local_storage_service.dart';
+import 'package:saytask/utils/reminder_call_helper.dart';
+
 import '../utils/routes/routes.dart'; // for router
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  print("Background Message: ${message.messageId}");
+  print("Background FCM Message: ${message.messageId} | Data: ${message.data}");
+
 }
 
 class NotificationService {
@@ -29,7 +32,7 @@ class NotificationService {
     'high_importance_channel',
     'Important Notifications',
     description: 'Used for task reminders and alerts',
-    importance: Importance.high,
+    importance: Importance.max, // Raised to max for better visibility
     playSound: true,
   );
 
@@ -48,7 +51,8 @@ class NotificationService {
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    const DarwinInitializationSettings iosSettings = DarwinInitializationSettings();
+    const DarwinInitializationSettings iosSettings =
+        DarwinInitializationSettings();
 
     const InitializationSettings initSettings = InitializationSettings(
       android: androidSettings,
@@ -59,21 +63,57 @@ class NotificationService {
       initSettings,
       onDidReceiveNotificationResponse: (response) {
         if (response.payload != null) {
-          _handlePayload(jsonDecode(response.payload!));
+          try {
+            _handlePayload(jsonDecode(response.payload!));
+          } catch (e) {
+            print("Payload decode error: $e");
+          }
         }
       },
     );
 
-    // Create Android channel
+    // Create high-priority Android channel
     await _localNotifications
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(_channel);
 
-    // Foreground message handler
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    // ────────────────────── Foreground FCM Handler ──────────────────────
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+      print(
+        "Foreground FCM → ID: ${message.messageId} | Data: ${message.data}",
+      );
+
+      // Handle special "reminder_call" type
+      if (message.data['type'] == 'reminder_call') {
+        final taskId =
+            message.data['taskId']?.toString() ??
+            'unknown-${DateTime.now().millisecondsSinceEpoch}';
+        final title = message.data['title']?.toString() ?? 'SayTask Reminder';
+        final reminderText =
+            message.data['message']?.toString() ??
+            'Time to complete your task!';
+
+        print("Showing reminder call UI for task: $taskId");
+
+        // Trigger native incoming call screen
+        await ReminderCallHelper.showReminderCall(
+          taskId: taskId,
+          taskTitle: title,
+          reminderMessage: reminderText,
+        );
+
+        // Optional: also show a local notification as fallback / visual cue
+        await _showLocalReminderNotification(title, reminderText, taskId);
+
+        return; // Skip default notification handling for call reminders
+      }
+
+      // Normal notification handling (non-call reminders)
       final notification = message.notification;
       if (notification != null) {
-        _localNotifications.show(
+        await _localNotifications.show(
           notification.hashCode,
           notification.title,
           notification.body,
@@ -82,8 +122,9 @@ class NotificationService {
               _channel.id,
               _channel.name,
               channelDescription: _channel.description,
-              importance: Importance.high,
-              priority: Priority.high,
+              importance: Importance.max,
+              priority: Priority.max,
+              fullScreenIntent: true, // Helps show full-screen when tapped
               icon: '@mipmap/ic_launcher',
             ),
             iOS: const DarwinNotificationDetails(
@@ -97,22 +138,51 @@ class NotificationService {
       }
     });
 
-    // Handle tap when app is in background
-    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+    // App opened from background via notification tap
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      print("Opened from background via tap: ${message.data}");
       _handlePayload(message.data);
     });
 
-    // Handle tap when app was terminated
+    // App launched from terminated state via notification
     final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
     if (initialMessage != null) {
-      Future.delayed(const Duration(seconds: 1), () {
+      Future.delayed(const Duration(milliseconds: 800), () {
         _handlePayload(initialMessage.data);
       });
     }
   }
 
+  // Fallback local notification for reminder calls (with full-screen intent)
+  Future<void> _showLocalReminderNotification(
+    String title,
+    String body,
+    String taskId,
+  ) async {
+    await _localNotifications.show(
+      DateTime.now().millisecondsSinceEpoch % 1000000,
+      title,
+      body,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channel.id,
+          _channel.name,
+          channelDescription: _channel.description,
+          importance: Importance.max,
+          priority: Priority.max,
+          fullScreenIntent: true,
+          category: AndroidNotificationCategory.call,
+          playSound: true,
+          // If you added a custom sound in res/raw/reminder_ring.mp3:
+          // sound: const RawResourceAndroidNotificationSound('reminder_ring'),
+        ),
+      ),
+      payload: jsonEncode({'type': 'reminder_call', 'taskId': taskId}),
+    );
+  }
+
   static void _handlePayload(Map<String, dynamic> data) {
-    print("Notification tapped: $data");
+    print("Handling notification payload: $data");
 
     final context = router.routerDelegate.navigatorKey.currentContext;
     if (context == null) return;
@@ -122,61 +192,27 @@ class NotificationService {
     final screen = data['screen']?.toString();
 
     if (type == 'task' && id != null) {
-      context.go('/task-details/');
+      context.go('/task-details/$id');
     } else if (type == 'note' && id != null) {
-      context.go('/note-details/');
+      context.go('/note-details/$id');
     } else if (type == 'event' && id != null) {
-      context.go('/event-details/');
+      context.go('/event-details/$id');
     } else if (screen == 'home') {
       context.go('/home');
     } else if (screen == 'notes') {
       context.go('/notes');
     } else if (screen == 'calendar') {
       context.go('/calendar');
+    } else if (type == 'reminder_call') {
+      // Optional: go to task details when user taps fallback notification
+      final taskId = data['taskId']?.toString();
+      if (taskId != null && taskId != 'unknown') {
+        context.go('/task-details/$taskId');
+      } else {
+        context.go('/home');
+      }
     } else {
       context.go('/home');
     }
-  }
-
-  static Future<void> sendFcmTokenToBackend() async {
-    final fcmToken = await FirebaseMessaging.instance.getToken();
-    if (fcmToken == null) {
-      print("FCM Token is null - cannot send");
-      return;
-    }
-
-    final jwtToken = LocalStorageService.token;
-    if (jwtToken == null) {
-      print("User not logged in (no JWT token) - skipping FCM send");
-      return;
-    }
-
-    try {
-      final response = await http.post(
-        Uri.parse('${Urls.baseUrl}/auth/device-token/'),
-        headers: {
-          'Authorization': 'Bearer $jwtToken',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({'fcm_token': fcmToken}),
-      );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        // SUCCESS → PRINT THE TOKEN IN TERMINAL
-        print("FCM TOKEN SUCCESSFULLY SENT TO BACKEND");
-        print("FCM Token: $fcmToken");
-        print("=" * 60);
-      } else {
-        print("Failed to send FCM token: ${response.statusCode} ${response.body}");
-      }
-    } catch (e) {
-      print("Error sending FCM token: $e");
-    }
-
-    // Auto-resend on token refresh
-    FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
-      print("FCM Token refreshed! Resending to backend...");
-      await sendFcmTokenToBackend(); 
-    });
   }
 }

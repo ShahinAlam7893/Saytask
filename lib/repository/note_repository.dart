@@ -9,7 +9,7 @@ import 'package:saytask/service/local_storage_service.dart';
 import 'package:saytask/core/api_endpoints.dart';
 
 class NotesRepository {
-  static const String baseUrl = Urls.baseUrl; // your existing Urls class
+  static String baseUrl = Urls.baseUrl; // your existing Urls class
 
   Future<String?> _getToken() async {
     await LocalStorageService.init();

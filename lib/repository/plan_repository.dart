@@ -6,7 +6,7 @@ import 'package:saytask/model/plan_model.dart';
 import 'package:saytask/service/local_storage_service.dart';
 
 class PlanService {
-  static const String baseUrl = Urls.baseUrl;
+  static final String baseUrl = Urls.baseUrl;
 
   Future<String?> _getToken() async {
     await LocalStorageService.init();

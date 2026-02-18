@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:saytask/model/today_task_model.dart';
 import 'package:saytask/repository/today_task_service.dart';
 import 'package:saytask/res/color.dart';
+import 'package:saytask/utils/reminder_call_helper.dart';
 
 class TaskDetailsScreen extends StatefulWidget {
   final String taskId;
@@ -389,7 +390,25 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               label: Text('Add Tag', style: TextStyle(fontSize: 14.sp, color: AppColors.black, fontWeight: FontWeight.w600)),
               style: TextButton.styleFrom(shape: const StadiumBorder(), side: BorderSide(color: AppColors.secondaryTextColor, width: 1)),
             ),
+
             SizedBox(height: 16.h),
+
+            ElevatedButton(
+  onPressed: () async {
+    print("Manually triggering test reminder call...");
+    await ReminderCallHelper.showReminderCall(
+      taskId: "test-debug-001",
+      taskTitle: "Drink Water Now",
+      reminderMessage: "Hey SHAHIN, time to hydrate! 💧",
+      autoDeclineAfterSeconds: 30,
+    );
+  },
+  child: const Text("TEST: Show Reminder Call UI"),
+  style: ElevatedButton.styleFrom(
+    backgroundColor: Colors.green,
+    foregroundColor: Colors.white,
+  ),
+),
 
             // Reminders
             Row(children: [const Icon(Icons.notifications_none, color: Colors.green), SizedBox(width: 8.w), Text('Reminders', style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold))]),

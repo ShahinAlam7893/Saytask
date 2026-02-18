@@ -4,7 +4,7 @@ import 'package:saytask/core/api_endpoints.dart';
 import 'package:saytask/service/local_storage_service.dart';
 
 class ProfileService {
-  static const String baseUrl = Urls.baseUrl;
+  static final String baseUrl = Urls.baseUrl;
 
   Future<String?> _getToken() async {
     await LocalStorageService.init();

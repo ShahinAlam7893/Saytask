@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:saytask/core/jwt_helper.dart';
 import 'package:saytask/model/user_model.dart';
 import 'package:saytask/repository/auth_repository.dart';
+import 'package:saytask/repository/fcm_token_service.dart';
 import 'package:saytask/repository/notification_service.dart';
 import 'package:saytask/service/local_storage_service.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -100,7 +101,7 @@ class AuthViewModel extends ChangeNotifier {
       if (token != null) {
         _accessToken = token;
         currentUser = user;
-        await NotificationService.sendFcmTokenToBackend();
+        await sendFcmTokenToBackend();
         notifyListeners();
         return true;
       }

@@ -5,6 +5,7 @@ import 'package:flutter_advanced_switch/flutter_advanced_switch.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:saytask/main.dart' as TtsHelper;
 import 'package:saytask/repository/calendar_service.dart';
 import 'package:saytask/repository/notes_service.dart';
 import 'package:saytask/repository/today_task_service.dart';
@@ -12,6 +13,7 @@ import 'package:saytask/res/color.dart';
 import 'package:saytask/repository/speech_provider.dart';
 import 'package:saytask/repository/voice_action_repository.dart';
 import 'package:saytask/res/components/top_snackbar.dart';
+import 'package:saytask/utils/reminder_call_helper.dart';
 
 class SpeackEventCard extends StatefulWidget {
   final Future<void> Function()? onSave;
@@ -26,6 +28,7 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
   late ValueNotifier<bool> _callMeController;
   bool isExpanded = false;
   bool isEditing = false;
+  bool _isSaving = false;
 
   late String _title;
   late String _note;
@@ -41,8 +44,11 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
     final cls = context.read<SpeechProvider>().lastClassification!;
 
     _title = cls.title.isEmpty ? "New Item" : cls.title;
-    _note = cls.description?.isNotEmpty == true ? cls.description! : cls.rawText;
-    _selectedReminder = cls.reminder;
+    _note = cls.description?.isNotEmpty == true
+        ? cls.description!
+        : cls.rawText;
+    // _selectedReminder = cls.reminder;
+    _selectedReminder = "At time of event";
     _callMeController = ValueNotifier<bool>(cls.callMe);
 
     _titleController = TextEditingController(text: _title);
@@ -69,7 +75,7 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
     super.dispose();
   }
 
-  // ⭐ DELAY +1 HOUR
+  //DELAY +1 HOUR
   void _delayOneHour() {
     setState(() {
       _eventDateTime = _eventDateTime.add(const Duration(hours: 1));
@@ -81,7 +87,7 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
     );
   }
 
-  // ⭐ SET CALL ME
+  // SET CALL ME
   void _setCallMe() {
     _callMeController.value = true;
     TopSnackBar.show(
@@ -91,7 +97,7 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
     );
   }
 
-  // ⭐ SET REMINDER TO 30 MIN
+  //SET REMINDER TO 30 MIN
   void _setReminder30Min() {
     setState(() {
       _selectedReminder = "30 minutes before";
@@ -103,11 +109,18 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
     );
   }
 
-  // ⭐ BUILD REMINDERS
   List<Map<String, dynamic>> _buildReminders() {
     final reminders = <Map<String, dynamic>>[];
 
+    if (_callMeController.value) {
+      reminders.add({
+        "time_before": 0,
+        "types": ["notification", "call"],
+      });
+    }
+
     final minutesMap = {
+      "At time of event": 0,
       "5 minutes before": 5,
       "10 minutes before": 10,
       "15 minutes before": 15,
@@ -118,24 +131,12 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
 
     final minutes = minutesMap[_selectedReminder] ?? 0;
 
-    if (_callMeController.value) {
-      reminders.add({
-        "time_before": 10,
-        "types": ["notification", "call"],
-      });
-    }
-
-    if (minutes > 0 && _selectedReminder != "At time of event" && _selectedReminder != "None") {
+    if (minutes > 0 &&
+        _selectedReminder != "At time of event" &&
+        _selectedReminder != "None" &&
+        _selectedReminder.isNotEmpty) {
       reminders.add({
         "time_before": minutes,
-        "types": ["notification"],
-      });
-    }
-
-    // Default reminder if none specified
-    if (reminders.isEmpty) {
-      reminders.add({
-        "time_before": 30,
         "types": ["notification"],
       });
     }
@@ -143,20 +144,30 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
     return reminders;
   }
 
-  // ⭐ SAVE TO DATABASE
   Future<void> _saveToDatabase() async {
+    if (_isSaving) return; // Prevent double-tap
+
+    setState(() => _isSaving = true);
+
     final cls = context.read<SpeechProvider>().lastClassification!;
     final repo = VoiceActionRepository();
 
     try {
       final startTimeStr = _eventDateTime.toUtc().toIso8601String();
-      final title = _titleController.text.trim().isEmpty ? "New Item" : _titleController.text.trim();
+      final title = _titleController.text.trim().isEmpty
+          ? "New Item"
+          : _titleController.text.trim();
       final description = _noteController.text.trim();
 
-      if (cls.type == 'event') {
-        final endTimeStr = _eventDateTime.add(const Duration(hours: 1)).toUtc().toIso8601String();
+      String? createdItemId;
 
-        await repo.createEvent({
+      if (cls.type == 'event') {
+        final endTimeStr = _eventDateTime
+            .add(const Duration(hours: 1))
+            .toUtc()
+            .toIso8601String();
+
+        final response = await repo.createEvent({
           "title": title,
           "description": description,
           "event_datetime": startTimeStr,
@@ -166,11 +177,12 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
           "location_address": cls.location ?? "",
         });
 
+        createdItemId = response['id'] as String?;
+
         if (!mounted) return;
         await context.read<CalendarProvider>().loadEvents();
-
       } else if (cls.type == 'task') {
-        await repo.createTask({
+        final response = await repo.createTask({
           "title": title,
           "description": description,
           "start_time": startTimeStr,
@@ -180,14 +192,54 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
           "completed": false,
         });
 
+        createdItemId = response['id'] as String?;
+
         if (!mounted) return;
         await context.read<TaskProvider>().loadTasks();
-
       } else {
         await repo.createNote(description);
-
         if (!mounted) return;
         await context.read<NotesProvider>().loadNotes();
+      }
+
+      // Local call scheduling (unchanged — already perfect)
+      if (_callMeController.value) {
+        final now = DateTime.now();
+        var delay = _eventDateTime.difference(now);
+
+        if (delay.isNegative || delay.inSeconds < 10) {
+          delay = Duration.zero;
+          print("Voice call time passed/close — triggering NOW");
+        }
+
+        Future.delayed(delay, () async {
+          try {
+            final reminderText = description.isNotEmpty
+                ? "$title. $description"
+                : title;
+
+            await ReminderCallHelper.showReminderCall(
+              taskId:
+                  createdItemId ??
+                  "voice-${DateTime.now().millisecondsSinceEpoch}",
+              itemId: createdItemId ?? "voice-item",
+              taskTitle: title,
+              reminderMessage: reminderText,
+              autoDeclineAfterSeconds: 60,
+            );
+
+            await TtsHelper.speakReminder(reminderText);
+            print(
+              "Voice local call TRIGGERED successfully for: $title at $_eventDateTime",
+            );
+          } catch (e) {
+            print("Voice local call failed: $e");
+          }
+        });
+
+        print(
+          "Voice call scheduled locally — delay: ${delay.inMinutes} min (${delay.inSeconds} sec) for: $title at $_eventDateTime",
+        );
       }
 
       if (!mounted) return;
@@ -199,7 +251,6 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
       );
 
       context.read<SpeechProvider>().resetCardState();
-
     } catch (e) {
       if (!mounted) return;
 
@@ -209,8 +260,82 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
         backgroundColor: Colors.red[700]!,
         duration: const Duration(seconds: 4),
       );
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
+
+  // Future<void> _saveToDatabase() async {
+  //   final cls = context.read<SpeechProvider>().lastClassification!;
+  //   final repo = VoiceActionRepository();
+
+  //   try {
+  //     final startTimeStr = _eventDateTime.toUtc().toIso8601String();
+  //     final title = _titleController.text.trim().isEmpty
+  //         ? "New Item"
+  //         : _titleController.text.trim();
+  //     final description = _noteController.text.trim();
+
+  //     if (cls.type == 'event') {
+  //       final endTimeStr = _eventDateTime
+  //           .add(const Duration(hours: 1))
+  //           .toUtc()
+  //           .toIso8601String();
+
+  //       await repo.createEvent({
+  //         "title": title,
+  //         "description": description,
+  //         "event_datetime": startTimeStr,
+  //         "start_time": startTimeStr,
+  //         "end_time": endTimeStr,
+  //         "reminders": _buildReminders().isNotEmpty ? _buildReminders() : [],
+  //         "location_address": cls.location ?? "",
+  //       });
+
+  //       if (!mounted) return;
+  //       await context.read<CalendarProvider>().loadEvents();
+  //     } else if (cls.type == 'task') {
+  //       await repo.createTask({
+  //         "title": title,
+  //         "description": description,
+  //         "start_time": startTimeStr,
+  //         "duration": 60,
+  //         "tags": cls.tags ?? [],
+  //         "reminders": _buildReminders(),
+  //         "completed": false,
+  //       });
+
+  //       if (!mounted) return;
+  //       await context.read<TaskProvider>().loadTasks();
+  //     } else {
+  //       await repo.createNote(description);
+
+  //       if (!mounted) return;
+  //       await context.read<NotesProvider>().loadNotes();
+  //     }
+
+  //     if (!mounted) return;
+
+  //     TopSnackBar.show(
+  //       context,
+  //       message: "Saved successfully!",
+  //       backgroundColor: Colors.green[700]!,
+  //     );
+
+  //     context.read<SpeechProvider>().resetCardState();
+  //   } catch (e) {
+  //     if (!mounted) return;
+
+  //     TopSnackBar.show(
+  //       context,
+  //       message: "Error: $e",
+  //       backgroundColor: Colors.red[700]!,
+  //       duration: const Duration(seconds: 4),
+  //     );
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -338,38 +463,40 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
                             value: _selectedReminder,
                             dropdownColor: Colors.grey[850],
                             icon: const SizedBox.shrink(),
-                            items: [
-                              "At time of event",
-                              "5 minutes before",
-                              "10 minutes before",
-                              "15 minutes before",
-                              "30 minutes before",
-                              "1 hour before",
-                              "2 hours before",
-                              "None",
-                            ].map((e) {
-                              return DropdownMenuItem(
-                                value: e,
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      e,
-                                      style: TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 14.sp,
-                                      ),
+                            items:
+                                [
+                                  "At time of event",
+                                  "5 minutes before",
+                                  "10 minutes before",
+                                  "15 minutes before",
+                                  "30 minutes before",
+                                  "1 hour before",
+                                  "2 hours before",
+                                  "None",
+                                ].map((e) {
+                                  return DropdownMenuItem(
+                                    value: e,
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          e,
+                                          style: TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 14.sp,
+                                          ),
+                                        ),
+                                        if (e == _selectedReminder)
+                                          const Icon(
+                                            Icons.check,
+                                            color: Colors.green,
+                                            size: 18,
+                                          ),
+                                      ],
                                     ),
-                                    if (e == _selectedReminder)
-                                      const Icon(
-                                        Icons.check,
-                                        color: Colors.green,
-                                        size: 18,
-                                      ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
+                                  );
+                                }).toList(),
                             onChanged: (val) {
                               if (val != null) {
                                 setState(() => _selectedReminder = val);
@@ -438,9 +565,17 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
                   runSpacing: 8.h,
                   alignment: WrapAlignment.center,
                   children: [
-                    _buildMiniButton("Delay +1 hr", Icons.access_time, _delayOneHour),
+                    _buildMiniButton(
+                      "Delay +1 hr",
+                      Icons.access_time,
+                      _delayOneHour,
+                    ),
                     _buildMiniButton("Call Me", Icons.call, _setCallMe),
-                    _buildMiniButton("Remind 30 min", Icons.notifications_active, _setReminder30Min),
+                    _buildMiniButton(
+                      "Remind 30 min",
+                      Icons.notifications_active,
+                      _setReminder30Min,
+                    ),
                   ],
                 ),
               ),
@@ -449,7 +584,8 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   IconButton(
-                    onPressed: () => context.read<SpeechProvider>().resetCardState(),
+                    onPressed: () =>
+                        context.read<SpeechProvider>().resetCardState(),
                     icon: Icon(
                       Icons.delete_outline,
                       color: AppColors.white,
@@ -476,38 +612,55 @@ class _SpeackEventCardState extends State<SpeackEventCard> {
             ],
 
             // SAVE BUTTON
-            Center(
-              child: SizedBox(
-                height: 40.h,
-                width: 120.w,
+            SizedBox(height: 12.h),
+            if (_isSaving)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 20.w,
+                    height: 20.h,
+                    child: const CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 3.0,
+                    ),
+                  ),
+                  SizedBox(width: 8.w),
+                  Text(
+                    "Saving...",
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'Poppins',
+                    ),
+                  ),
+                ],
+              )
+            else
+              Center(
                 child: ElevatedButton(
                   onPressed: _saveToDatabase,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.green,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20.r),
+                    // minimumSize: Size(double.infinity, 48.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 40.w,
+                      vertical: 10.h,
                     ),
-                    elevation: 6,
+                    backgroundColor: Colors.green,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25.r),
+                    ),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.check, size: 18.sp),
-                      SizedBox(width: 6.w),
-                      Text(
-                        "Save",
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: 'Poppins',
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    "Save",
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),

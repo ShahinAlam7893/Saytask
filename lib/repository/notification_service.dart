@@ -1,23 +1,23 @@
 // lib/services/notification_service.dart
+import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_callkit_incoming/entities/call_event.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:go_router/go_router.dart';
-import 'package:http/http.dart' as http;
-import 'package:saytask/core/api_endpoints.dart';
-import 'package:saytask/service/local_storage_service.dart';
 import 'package:saytask/utils/reminder_call_helper.dart';
-
-import '../utils/routes/routes.dart'; // for router
+import 'package:saytask/utils/tts_helper.dart';
+import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
+import 'package:uuid/uuid.dart';
+import '../utils/routes/routes.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
   print("Background FCM Message: ${message.messageId} | Data: ${message.data}");
-
+  await NotificationService._instance._handleMessage(message);
 }
 
 class NotificationService {
@@ -35,6 +35,8 @@ class NotificationService {
     importance: Importance.max, // Raised to max for better visibility
     playSound: true,
   );
+
+  StreamSubscription? _callKitSubscription;
 
   Future<void> initialize() async {
     // Request permissions
@@ -62,55 +64,114 @@ class NotificationService {
     await _localNotifications.initialize(
       initSettings,
       onDidReceiveNotificationResponse: (response) {
-        if (response.payload != null) {
+        final payloadStr = response.payload;
+        if (payloadStr != null) {
           try {
-            _handlePayload(jsonDecode(response.payload!));
+            final data = jsonDecode(payloadStr) as Map<String, dynamic>;
+            _handlePayload(data);
           } catch (e) {
-            print("Payload decode error: $e");
+            print("Error parsing payload: $e");
           }
         }
       },
     );
 
-    // Create high-priority Android channel
     await _localNotifications
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >()
         ?.createNotificationChannel(_channel);
 
-    // ────────────────────── Foreground FCM Handler ──────────────────────
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
-      print(
-        "Foreground FCM → ID: ${message.messageId} | Data: ${message.data}",
-      );
+    // Initialize TTS
+    await TtsHelper.init();
 
-      // Handle special "reminder_call" type
-      if (message.data['type'] == 'reminder_call') {
-        final taskId =
-            message.data['taskId']?.toString() ??
-            'unknown-${DateTime.now().millisecondsSinceEpoch}';
-        final title = message.data['title']?.toString() ?? 'SayTask Reminder';
-        final reminderText =
-            message.data['message']?.toString() ??
-            'Time to complete your task!';
+    // Setup FCM listeners
+    FirebaseMessaging.onMessage.listen(_handleMessage);
 
-        print("Showing reminder call UI for task: $taskId");
+    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      _handleMessage(message);
+    });
 
-        // Trigger native incoming call screen
-        await ReminderCallHelper.showReminderCall(
-          taskId: taskId,
-          taskTitle: title,
-          reminderMessage: reminderText,
-        );
+    // Setup CallKit event listeners
+    _setupCallKitListeners();
+  }
 
-        // Optional: also show a local notification as fallback / visual cue
-        await _showLocalReminderNotification(title, reminderText, taskId);
+  void _setupCallKitListeners() {
+    _callKitSubscription = FlutterCallkitIncoming.onEvent.listen((event) async {
+      if (event == null) return;
+      final body = event.body as Map<String, dynamic>? ?? {};
+      final extra = body['extra'] as Map<String, dynamic>? ?? {};
+      final type = extra['type'] as String?;
+      final taskId = extra['taskId'] as String?;
+      final itemId = extra['itemId'] as String?;
+      final reminderMessage =
+          body['handle'] as String? ?? "It's time for your reminder";
+      final reminderType =
+          extra['reminder_type'] as String? ??
+          'task'; // 'task', 'event', or 'chat'
 
-        return; // Skip default notification handling for call reminders
+      switch (event.event) {
+        case 'com.hutvecklare.appcallkit.ACTION_CALL_ACCEPT':
+          print("Reminder call accepted for $type: $taskId / $itemId");
+          // Speak the reminder message
+          await TtsHelper.speak(reminderMessage);
+          // Navigate to details if app is open
+          final context = router.routerDelegate.navigatorKey.currentContext;
+          if (context != null) {
+            if (reminderType == 'task' && taskId != null) {
+              context.go('/task-details/$taskId');
+            } else if (reminderType == 'event' && itemId != null) {
+              context.go(
+                '/event-details/$itemId',
+              ); // Assuming event details path uses itemId
+            } else if (reminderType == 'chat' && itemId != null) {
+              context.go('/chat'); // Or specific chat message if possible
+            }
+          }
+          // End the call UI after accept
+          await FlutterCallkitIncoming.endCall(body['id'] as String);
+          break;
+
+        case 'com.hutvecklare.appcallkit.ACTION_CALL_DECLINE':
+          print("Reminder call declined for $type: $taskId / $itemId");
+          // Optionally snooze or reschedule via backend
+          await FlutterCallkitIncoming.endCall(body['id'] as String);
+          break;
+
+        case 'com.hsviluppare.appcallkit.ACTION_CALL_TIMEOUT':
+          print("Reminder call timed out for $type: $taskId / $itemId");
+          // Handle timeout if needed
+          break;
+
+        default:
+          break;
       }
+    });
+  }
 
-      // Normal notification handling (non-call reminders)
+  Future<void> _handleMessage(RemoteMessage message) async {
+    final data = message.data;
+    print("Handling FCM message: ${data}");
+
+    if (data['type'] == 'reminder_call') {
+      final taskId = data['task_id'] as String? ?? Uuid().v4();
+      final itemId = data['item_id'] as String? ?? Uuid().v4();
+      final taskTitle = data['title'] as String? ?? 'Reminder';
+      final reminderMessage =
+          data['message'] as String? ?? "It's time for your task";
+      final reminderType =
+          data['reminder_type'] as String? ??
+          'task'; // 'task', 'event', or 'chat'
+
+      await ReminderCallHelper.showReminderCall(
+        taskId: taskId,
+        taskTitle: taskTitle,
+        itemId: itemId,
+        reminderMessage: reminderMessage,
+        extra: {'reminder_type': reminderType}, // Pass extra for type
+      );
+    } else {
+      // Show regular notification
       final notification = message.notification;
       if (notification != null) {
         await _localNotifications.show(
@@ -123,37 +184,16 @@ class NotificationService {
               _channel.name,
               channelDescription: _channel.description,
               importance: Importance.max,
-              priority: Priority.max,
-              fullScreenIntent: true, // Helps show full-screen when tapped
-              icon: '@mipmap/ic_launcher',
-            ),
-            iOS: const DarwinNotificationDetails(
-              presentAlert: true,
-              presentBadge: true,
-              presentSound: true,
+              priority: Priority.high,
+              playSound: true,
             ),
           ),
-          payload: jsonEncode(message.data),
+          payload: jsonEncode(data),
         );
       }
-    });
-
-    // App opened from background via notification tap
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print("Opened from background via tap: ${message.data}");
-      _handlePayload(message.data);
-    });
-
-    // App launched from terminated state via notification
-    final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
-    if (initialMessage != null) {
-      Future.delayed(const Duration(milliseconds: 800), () {
-        _handlePayload(initialMessage.data);
-      });
     }
   }
 
-  // Fallback local notification for reminder calls (with full-screen intent)
   Future<void> _showLocalReminderNotification(
     String title,
     String body,
@@ -190,6 +230,7 @@ class NotificationService {
     final type = data['type']?.toString();
     final id = data['id']?.toString();
     final screen = data['screen']?.toString();
+    final reminderType = data['reminder_type']?.toString();
 
     if (type == 'task' && id != null) {
       context.go('/task-details/$id');
@@ -206,13 +247,22 @@ class NotificationService {
     } else if (type == 'reminder_call') {
       // Optional: go to task details when user taps fallback notification
       final taskId = data['taskId']?.toString();
-      if (taskId != null && taskId != 'unknown') {
+      final itemId = data['itemId']?.toString();
+      if (reminderType == 'task' && taskId != null) {
         context.go('/task-details/$taskId');
+      } else if (reminderType == 'event' && itemId != null) {
+        context.go('/event-details/$itemId');
+      } else if (reminderType == 'chat') {
+        context.go('/chat'); // Navigate to chat screen
       } else {
         context.go('/home');
       }
     } else {
       context.go('/home');
     }
+  }
+
+  Future<void> dispose() async {
+    _callKitSubscription?.cancel();
   }
 }

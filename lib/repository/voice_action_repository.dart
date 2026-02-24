@@ -15,25 +15,26 @@ class VoiceActionRepository {
     return LocalStorageService.token;
   }
 
-  Future<Map<String, dynamic>> classifyVoiceInput(String text) async {
-    final token = await _getToken();
-    if (token == null) throw Exception("Not authenticated");
+  // Future<Map<String, dynamic>> classifyVoiceInput(String text) async {
+  //   final token = await _getToken();
+  //   if (token == null) throw Exception("Not authenticated");
 
-    final response = await http.post(
-      Uri.parse('$baseUrl/chatbot/classify/'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: json.encode({"message": text.trim()}),
-    );
+  //   final response = await http.post(
+  //     Uri.parse('$baseUrl/chatbot/classify/'),
+  //     headers: {
+  //       'Authorization': 'Bearer $token',
+  //       'Content-Type': 'application/json',
+  //     },
+  //     body: json.encode({"message": text.trim()}),
+  //   );
 
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
-    } else {
-      throw Exception("Classification failed: ${response.body}");
-    }
-  }
+  //   if (response.statusCode == 200) {
+  //     debugPrint('Classification response----->>>: ${response.body}');
+  //     return json.decode(response.body);
+  //   } else {
+  //     throw Exception("Classification failed: ${response.body}");
+  //   }
+  // }
 
   Future<Map<String, dynamic>> createEvent(Map<String, dynamic> data) async {
     final token = await _getToken();
@@ -47,6 +48,7 @@ class VoiceActionRepository {
     );
 
     if (response.statusCode == 201 || response.statusCode == 200) {
+      print('Event creation response from voice----->>>: ${response.body}');
       return json.decode(response.body);
     }
     throw Exception("Failed to create event: ${response.body}");
@@ -90,13 +92,54 @@ class VoiceActionRepository {
     throw Exception("Failed to save note: ${response.body}");
   }
 
+  Future<void> updateTask(String itemId, Map<String, dynamic> data) async {
+    final token = LocalStorageService.token;
+    if (token == null) throw Exception('No token found');
+
+    final response = await http.put(
+      Uri.parse('${Urls.baseUrl}/actions/tasks/$itemId/'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(data),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to update task: ${response.statusCode} - ${response.body}',
+      );
+    }
+  }
+
+  Future<void> updateEvent(String itemId, Map<String, dynamic> data) async {
+    final token = LocalStorageService.token;
+    if (token == null) throw Exception('No token found');
+
+    final response = await http.put(
+      Uri.parse('${Urls.baseUrl}/actions/events/$itemId/'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(data),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to update task: ${response.statusCode} - ${response.body}',
+      );
+    }
+  }
+
+  // Same pattern for updateEvent, just change endpoint to /actions/events/$itemId/
   Future<void> saveVoiceAction(VoiceClassification classification) async {
     try {
       // CRITICAL FIX: Ensure date is never null
       final now = DateTime.now();
       final dateStr = _parseDate(classification.date);
       final timeStr = _parseTime(classification.time);
-      
+
       // Build proper ISO 8601 UTC string
       final localDateTime = DateTime.parse('$dateStr $timeStr');
       final startTimeStr = localDateTime.toUtc().toIso8601String();
@@ -110,7 +153,9 @@ class VoiceActionRepository {
       switch (classification.type) {
         case 'task':
           await createTask({
-            "title": classification.title.trim().isEmpty ? "New Task" : classification.title.trim(),
+            "title": classification.title.trim().isEmpty
+                ? "New Task"
+                : classification.title.trim(),
             "description": classification.description?.trim() ?? "",
             "start_time": startTimeStr,
             "duration": 60,
@@ -121,9 +166,14 @@ class VoiceActionRepository {
           break;
 
         case 'event':
-          final endTimeStr = localDateTime.add(const Duration(hours: 1)).toUtc().toIso8601String();
+          final endTimeStr = localDateTime
+              .add(const Duration(hours: 1))
+              .toUtc()
+              .toIso8601String();
           await createEvent({
-            "title": classification.title.trim().isEmpty ? "New Event" : classification.title.trim(),
+            "title": classification.title.trim().isEmpty
+                ? "New Event"
+                : classification.title.trim(),
             "description": classification.description?.trim() ?? "",
             "event_datetime": startTimeStr,
             "start_time": startTimeStr,
@@ -197,7 +247,9 @@ class VoiceActionRepository {
   }
 
   // Build reminders array
-  List<Map<String, dynamic>> _buildReminders(VoiceClassification classification) {
+  List<Map<String, dynamic>> _buildReminders(
+    VoiceClassification classification,
+  ) {
     final reminders = <Map<String, dynamic>>[];
 
     if (classification.callMe) {
@@ -207,7 +259,8 @@ class VoiceActionRepository {
       });
     }
 
-    if (classification.reminder != "At time of event" && classification.reminder != "None") {
+    if (classification.reminder != "At time of event" &&
+        classification.reminder != "None") {
       final minutes = _reminderToMinutes(classification.reminder);
       if (minutes > 0) {
         reminders.add({

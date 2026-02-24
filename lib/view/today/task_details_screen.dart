@@ -114,40 +114,79 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
           picked.minute,
         );
         _startTimeController.text = picked.format(context);
-        _endTimeController.text = DateFormat('h:mm a').format(_startTime.add(_task!.duration));
+        _endTimeController.text = DateFormat(
+          'h:mm a',
+        ).format(_startTime.add(_task!.duration));
       });
     }
   }
 
   Future<Tag?> _pickTag(BuildContext context) async {
     final availableTags = [
-      Tag(name: 'Work', backgroundColor: const Color(0xFFEDE7F6), textColor: const Color(0xFF7E57C2)),
-      Tag(name: 'Personal', backgroundColor: const Color(0xFFFFF1E0), textColor: const Color(0xFFF9A825)),
-      Tag(name: 'Shopping', backgroundColor: const Color(0xFFFFF1E0), textColor: const Color(0xFFF9A825)),
-      Tag(name: 'Urgent', backgroundColor: const Color(0xFFFFEBEE), textColor: const Color(0xFFD32F2F)),
-      Tag(name: 'Important', backgroundColor: const Color(0xFFE3F2FD), textColor: const Color(0xFF42A5F5)),
+      Tag(
+        name: 'Work',
+        backgroundColor: const Color(0xFFEDE7F6),
+        textColor: const Color(0xFF7E57C2),
+      ),
+      Tag(
+        name: 'Personal',
+        backgroundColor: const Color(0xFFFFF1E0),
+        textColor: const Color(0xFFF9A825),
+      ),
+      Tag(
+        name: 'Shopping',
+        backgroundColor: const Color(0xFFFFF1E0),
+        textColor: const Color(0xFFF9A825),
+      ),
+      Tag(
+        name: 'Urgent',
+        backgroundColor: const Color(0xFFFFEBEE),
+        textColor: const Color(0xFFD32F2F),
+      ),
+      Tag(
+        name: 'Important',
+        backgroundColor: const Color(0xFFE3F2FD),
+        textColor: const Color(0xFF42A5F5),
+      ),
     ];
 
     return showDialog<Tag>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r), side: const BorderSide(color: Colors.grey)),
-        title: const Text('Choose a Tag', style: TextStyle(fontWeight: FontWeight.bold)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12.r),
+          side: const BorderSide(color: Colors.grey),
+        ),
+        title: const Text(
+          'Choose a Tag',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         content: SizedBox(
           width: double.maxFinite,
           child: ListView.builder(
             shrinkWrap: true,
             itemCount: availableTags.length,
             itemBuilder: (_, i) => ListTile(
-              leading: CircleAvatar(backgroundColor: availableTags[i].backgroundColor),
-              title: Text(availableTags[i].name, style: const TextStyle(fontWeight: FontWeight.w500)),
+              leading: CircleAvatar(
+                backgroundColor: availableTags[i].backgroundColor,
+              ),
+              title: Text(
+                availableTags[i].name,
+                style: const TextStyle(fontWeight: FontWeight.w500),
+              ),
               onTap: () => Navigator.pop(ctx, availableTags[i]),
             ),
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600))),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
         ],
       ),
     );
@@ -162,14 +201,22 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       '2 hr before',
     ];
 
-    final currentLabels = _task!.reminders.map((r) => _minutesToLabel(r.timeBefore)).toSet();
+    final currentLabels = _task!.reminders
+        .map((r) => _minutesToLabel(r.timeBefore))
+        .toSet();
 
     return showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r), side: const BorderSide(color: Colors.grey)),
-        title: const Text('Add Reminder', style: TextStyle(fontWeight: FontWeight.bold)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12.r),
+          side: const BorderSide(color: Colors.grey),
+        ),
+        title: const Text(
+          'Add Reminder',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         content: SizedBox(
           width: double.maxFinite,
           child: ListView.builder(
@@ -178,7 +225,13 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
             itemBuilder: (_, i) {
               final isSelected = currentLabels.contains(availableReminders[i]);
               return ListTile(
-                title: Text(availableReminders[i], style: TextStyle(color: isSelected ? Colors.grey : Colors.black, fontWeight: FontWeight.w500)),
+                title: Text(
+                  availableReminders[i],
+                  style: TextStyle(
+                    color: isSelected ? Colors.grey : Colors.black,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
                 enabled: !isSelected,
                 onTap: () => Navigator.pop(ctx, availableReminders[i]),
               );
@@ -186,7 +239,10 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
         ],
       ),
     );
@@ -204,9 +260,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     if (_errorMessage != null || _task == null) {
@@ -216,7 +270,6 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
             icon: const Icon(Icons.arrow_back),
             color: AppColors.black,
             onPressed: () => context.pop(),
-            
           ),
           title: const Text('Task Details'),
         ),
@@ -232,10 +285,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: 20.h),
-              ElevatedButton(
-                onPressed: _loadTask,
-                child: const Text("Retry"),
-              ),
+              ElevatedButton(onPressed: _loadTask, child: const Text("Retry")),
             ],
           ),
         ),
@@ -261,8 +311,14 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                   title: const Text('Unsaved Changes'),
                   content: const Text('Save changes before leaving?'),
                   actions: [
-                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Discard')),
-                    TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Discard'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text('Save'),
+                    ),
                   ],
                 ),
               );
@@ -279,7 +335,10 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
             if (mounted) context.pop();
           },
         ),
-        title: const Text('Task Details', style: TextStyle(color: AppColors.black, fontFamily: 'Poppins')),
+        title: const Text(
+          'Task Details',
+          style: TextStyle(color: AppColors.black, fontFamily: 'Poppins'),
+        ),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -292,8 +351,14 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               controller: _titleController,
               decoration: InputDecoration(
                 hintText: 'Task',
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8.r), borderSide: const BorderSide(color: Colors.grey, width: 1.5)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8.r), borderSide: const BorderSide(color: Colors.green, width: 2.0)),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8.r),
+                  borderSide: const BorderSide(color: Colors.grey, width: 1.5),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8.r),
+                  borderSide: const BorderSide(color: Colors.green, width: 2.0),
+                ),
               ),
               style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
             ),
@@ -306,9 +371,18 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               decoration: InputDecoration(
                 hintText: 'Description',
                 hintStyle: TextStyle(color: Colors.grey[600]),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10.r), borderSide: const BorderSide(color: Colors.grey, width: 1.5)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10.r), borderSide: const BorderSide(color: Colors.green, width: 2.0)),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.r),
+                  borderSide: const BorderSide(color: Colors.grey, width: 1.5),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.r),
+                  borderSide: const BorderSide(color: Colors.green, width: 2.0),
+                ),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 12.w,
+                  vertical: 10.h,
+                ),
               ),
               cursorColor: Colors.green,
               style: TextStyle(fontSize: 14.sp),
@@ -316,7 +390,19 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
             SizedBox(height: 16.h),
 
             // Schedule
-            Row(children: [const Icon(Icons.schedule, color: Colors.green), SizedBox(width: 8.w), Text('Schedule', style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold))]),
+            Row(
+              children: [
+                const Icon(Icons.schedule, color: Colors.green),
+                SizedBox(width: 8.w),
+                Text(
+                  'Schedule',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
             SizedBox(height: 8.h),
             Row(
               children: [
@@ -324,7 +410,13 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Start Time', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600)),
+                      Text(
+                        'Start Time',
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                       SizedBox(height: 6.h),
                       GestureDetector(
                         onTap: () => _pickStartTime(context),
@@ -332,9 +424,24 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                           child: TextField(
                             controller: _startTimeController,
                             decoration: InputDecoration(
-                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24.r), borderSide: const BorderSide(color: Colors.grey, width: 1.5)),
-                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24.r), borderSide: const BorderSide(color: Colors.green, width: 2.0)),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24.r),
+                                borderSide: const BorderSide(
+                                  color: Colors.grey,
+                                  width: 1.5,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24.r),
+                                borderSide: const BorderSide(
+                                  color: Colors.green,
+                                  width: 2.0,
+                                ),
+                              ),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12.w,
+                                vertical: 10.h,
+                              ),
                             ),
                           ),
                         ),
@@ -347,15 +454,36 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('End Time', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600)),
+                      Text(
+                        'End Time',
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                       SizedBox(height: 6.h),
                       TextField(
                         controller: _endTimeController,
                         readOnly: true,
                         decoration: InputDecoration(
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24.r), borderSide: const BorderSide(color: Colors.grey, width: 1.5)),
-                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24.r), borderSide: const BorderSide(color: Colors.green, width: 2.0)),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(24.r),
+                            borderSide: const BorderSide(
+                              color: Colors.grey,
+                              width: 1.5,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(24.r),
+                            borderSide: const BorderSide(
+                              color: Colors.green,
+                              width: 2.0,
+                            ),
+                          ),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12.w,
+                            vertical: 10.h,
+                          ),
                         ),
                       ),
                     ],
@@ -366,17 +494,39 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
             SizedBox(height: 16.h),
 
             // Tags (read-only display)
-            Row(children: [const Icon(Icons.local_offer, color: Colors.green), SizedBox(width: 8.w), Text('Tags', style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold))]),
+            Row(
+              children: [
+                const Icon(Icons.local_offer, color: Colors.green),
+                SizedBox(width: 8.w),
+                Text(
+                  'Tags',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
             SizedBox(height: 8.h),
             Wrap(
               spacing: 8.w,
               runSpacing: 8.h,
-              children: _task!.tags.map((tag) => Chip(
-                label: Text(tag.name, style: TextStyle(fontSize: 12.sp, color: tag.textColor)),
-                backgroundColor: tag.backgroundColor,
-                shape: const StadiumBorder(),
-                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-              )).toList(),
+              children: _task!.tags
+                  .map(
+                    (tag) => Chip(
+                      label: Text(
+                        tag.name,
+                        style: TextStyle(fontSize: 12.sp, color: tag.textColor),
+                      ),
+                      backgroundColor: tag.backgroundColor,
+                      shape: const StadiumBorder(),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 10.w,
+                        vertical: 4.h,
+                      ),
+                    ),
+                  )
+                  .toList(),
             ),
             SizedBox(height: 8.h),
             TextButton.icon(
@@ -387,56 +537,123 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                 }
               },
               icon: const Icon(Icons.add, color: AppColors.black),
-              label: Text('Add Tag', style: TextStyle(fontSize: 14.sp, color: AppColors.black, fontWeight: FontWeight.w600)),
-              style: TextButton.styleFrom(shape: const StadiumBorder(), side: BorderSide(color: AppColors.secondaryTextColor, width: 1)),
+              label: Text(
+                'Add Tag',
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  color: AppColors.black,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              style: TextButton.styleFrom(
+                shape: const StadiumBorder(),
+                side: BorderSide(color: AppColors.secondaryTextColor, width: 1),
+              ),
             ),
 
             SizedBox(height: 16.h),
 
             ElevatedButton(
-  onPressed: () async {
-    print("Manually triggering test reminder call...");
-    await ReminderCallHelper.showReminderCall(
-      taskId: "test-debug-001",
-      taskTitle: "Drink Water Now",
-      reminderMessage: "Hey SHAHIN, time to hydrate! 💧",
-      autoDeclineAfterSeconds: 30,
-    );
-  },
-  child: const Text("TEST: Show Reminder Call UI"),
-  style: ElevatedButton.styleFrom(
-    backgroundColor: Colors.green,
-    foregroundColor: Colors.white,
-  ),
-),
+              onPressed: () async {
+                print("Manually triggering test reminder call...");
+                await ReminderCallHelper.showReminderCall(
+                  taskId: widget.taskId,
+                  itemId: widget.taskId,
+                  taskTitle: "Drink Water Now",
+                  reminderMessage: "Hey SHAHIN, time to hydrate! 💧",
+                  autoDeclineAfterSeconds: 30,
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+              ),
+              child: Text("TEST: Show Reminder Call UI"),
+            ),
 
             // Reminders
-            Row(children: [const Icon(Icons.notifications_none, color: Colors.green), SizedBox(width: 8.w), Text('Reminders', style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold))]),
+            Row(
+              children: [
+                const Icon(Icons.notifications_none, color: Colors.green),
+                SizedBox(width: 8.w),
+                Text(
+                  'Reminders',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
             SizedBox(height: 8.h),
             Container(
               width: double.infinity,
               padding: EdgeInsets.all(12.w),
               child: _task!.reminders.isEmpty
-                  ? Text('No reminders set', style: TextStyle(fontSize: 14.sp, color: Colors.grey[600], fontStyle: FontStyle.italic))
+                  ? Text(
+                      'No reminders set',
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        color: Colors.grey[600],
+                        fontStyle: FontStyle.italic,
+                      ),
+                    )
                   : Column(
                       children: _task!.reminders.map((r) {
                         final label = _minutesToLabel(r.timeBefore);
                         return Container(
                           margin: EdgeInsets.only(bottom: 8.h),
-                          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
-                          decoration: BoxDecoration(color: const Color(0xFFFBFBFB), borderRadius: BorderRadius.circular(32.r), border: Border.all(color: Colors.grey.shade300)),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 10.w,
+                            vertical: 6.h,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFBFBFB),
+                            borderRadius: BorderRadius.circular(32.r),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
                           child: Row(
                             children: [
                               SizedBox(width: 8.w),
-                              Expanded(child: Text(label, style: TextStyle(fontSize: 14.sp, color: AppColors.black, fontWeight: FontWeight.w600))),
-                              Container(
-                                decoration: BoxDecoration(color: const Color(0xFFEF9937), borderRadius: BorderRadius.circular(12.r)),
-                                child: IconButton(icon: const Icon(Icons.notifications_none, color: Colors.white), onPressed: () {}),
+                              Expanded(
+                                child: Text(
+                                  label,
+                                  style: TextStyle(
+                                    fontSize: 14.sp,
+                                    color: AppColors.black,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
-                              if (r.shouldCall) IconButton(icon: const Icon(Icons.wifi_calling_3_outlined, color: AppColors.green), onPressed: () {}),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEF9937),
+                                  borderRadius: BorderRadius.circular(12.r),
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(
+                                    Icons.notifications_none,
+                                    color: Colors.white,
+                                  ),
+                                  onPressed: () {},
+                                ),
+                              ),
+                              if (r.shouldCall)
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.wifi_calling_3_outlined,
+                                    color: AppColors.green,
+                                  ),
+                                  onPressed: () {},
+                                ),
                               IconButton(
-                                icon: const Icon(Icons.close, color: Colors.red),
-                                onPressed: () => context.read<TaskProvider>().removeReminderFromTask(_task!.id, label),
+                                icon: const Icon(
+                                  Icons.close,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () => context
+                                    .read<TaskProvider>()
+                                    .removeReminderFromTask(_task!.id, label),
                               ),
                             ],
                           ),
@@ -449,12 +666,25 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               onPressed: () async {
                 final reminder = await _pickReminder(context);
                 if (reminder != null) {
-                  context.read<TaskProvider>().addReminderToTask(_task!.id, reminder);
+                  context.read<TaskProvider>().addReminderToTask(
+                    _task!.id,
+                    reminder,
+                  );
                 }
               },
               icon: const Icon(Icons.add, color: AppColors.black),
-              label: Text('Add Reminder', style: TextStyle(fontSize: 14.sp, color: AppColors.black, fontWeight: FontWeight.w600)),
-              style: TextButton.styleFrom(shape: const StadiumBorder(), side: BorderSide(color: AppColors.secondaryTextColor, width: 1)),
+              label: Text(
+                'Add Reminder',
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  color: AppColors.black,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              style: TextButton.styleFrom(
+                shape: const StadiumBorder(),
+                side: BorderSide(color: AppColors.secondaryTextColor, width: 1),
+              ),
             ),
             SizedBox(height: 16.h),
 
@@ -463,23 +693,51 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               children: [
                 TextButton.icon(
                   onPressed: () async {
-                    final confirm = await showDialog<bool>(context: context, builder: (_) => AlertDialog(
-                      backgroundColor: Colors.white,
-                      title: const Text('Delete Task?'),
-                      content: const Text('This action cannot be undone.'),
-                      actions: [
-                        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel', style: TextStyle(color: AppColors.black))),
-                        TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete', style: TextStyle(color: AppColors.red))),
-                      ],
-                    ));
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        backgroundColor: Colors.white,
+                        title: const Text('Delete Task?'),
+                        content: const Text('This action cannot be undone.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(color: AppColors.black),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text(
+                              'Delete',
+                              style: TextStyle(color: AppColors.red),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
                     if (confirm == true) {
                       context.read<TaskProvider>().removeTask(_task!.id);
                       if (mounted) context.pop();
                     }
                   },
                   icon: const Icon(Icons.delete, color: AppColors.red),
-                  label: Text('Delete', style: TextStyle(fontSize: 14.sp, color: AppColors.black)),
-                  style: TextButton.styleFrom(shape: const StadiumBorder(), side: BorderSide(color: AppColors.secondaryTextColor, width: 1), padding: EdgeInsets.symmetric(horizontal: 50.w, vertical: 8.h)),
+                  label: Text(
+                    'Delete',
+                    style: TextStyle(fontSize: 14.sp, color: AppColors.black),
+                  ),
+                  style: TextButton.styleFrom(
+                    shape: const StadiumBorder(),
+                    side: BorderSide(
+                      color: AppColors.secondaryTextColor,
+                      width: 1,
+                    ),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 50.w,
+                      vertical: 8.h,
+                    ),
+                  ),
                 ),
                 TextButton.icon(
                   onPressed: () {
@@ -492,8 +750,21 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                     context.pop();
                   },
                   icon: const Icon(Icons.done, color: AppColors.green),
-                  label: Text('Save', style: TextStyle(fontSize: 14.sp, color: AppColors.black)),
-                  style: TextButton.styleFrom(shape: const StadiumBorder(), side: BorderSide(color: AppColors.secondaryTextColor, width: 1), padding: EdgeInsets.symmetric(horizontal: 50.w, vertical: 8.h)),
+                  label: Text(
+                    'Save',
+                    style: TextStyle(fontSize: 14.sp, color: AppColors.black),
+                  ),
+                  style: TextButton.styleFrom(
+                    shape: const StadiumBorder(),
+                    side: BorderSide(
+                      color: AppColors.secondaryTextColor,
+                      width: 1,
+                    ),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 50.w,
+                      vertical: 8.h,
+                    ),
+                  ),
                 ),
               ],
             ),

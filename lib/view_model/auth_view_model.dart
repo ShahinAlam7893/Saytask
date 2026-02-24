@@ -249,7 +249,6 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
-// Add this inside AuthViewModel class
 Future<bool> updateNotificationsEnabled(bool enabled) async {
   isLoading = true;
   notifyListeners();
@@ -257,7 +256,6 @@ Future<bool> updateNotificationsEnabled(bool enabled) async {
   try {
     await _repository.updateProfileNotifications(enabled);
     
-    // Update currentUser if you have a field for it
     if (currentUser != null) {
       currentUser = currentUser!.copyWith(notificationsEnabled: enabled);
     }

@@ -5,13 +5,16 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
+import 'package:saytask/main.dart' as TtsHelper;
 import 'package:saytask/model/chat_model.dart';
 import 'package:saytask/repository/calendar_service.dart';
 import 'package:saytask/repository/chat_service.dart';
+import 'package:saytask/repository/reminder_service.dart';
 import 'package:saytask/repository/today_task_service.dart';
 import 'package:saytask/repository/notes_service.dart';
 import 'package:saytask/res/color.dart';
 import 'package:saytask/res/components/top_snackbar.dart';
+import 'package:saytask/utils/reminder_call_helper.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
@@ -73,6 +76,19 @@ class _ChatPageState extends State<ChatPage> {
     final vm = context.read<ChatViewModel>();
     await vm.sendMessage(message);
     _refreshProvidersAfterAIResponse();
+  }
+
+  int? _reminderTextToMinutes(String text) {
+    return switch (text) {
+      "5 minutes before" => 5,
+      "10 minutes before" => 10,
+      "15 minutes before" => 15,
+      "30 minutes before" => 30,
+      "1 hour before" => 60,
+      "2 hours before" => 120,
+      "At time of event" => 0,
+      _ => null,
+    };
   }
 
   @override
@@ -149,11 +165,12 @@ class _ChatPageState extends State<ChatPage> {
                           ),
                         );
                       }
-        
+
                       final messageIndex = vm.isTyping ? index - 1 : index;
-                      final reversedIndex = vm.messages.length - 1 - messageIndex;
+                      final reversedIndex =
+                          vm.messages.length - 1 - messageIndex;
                       final msg = vm.messages[reversedIndex];
-        
+
                       if (msg.type == MessageType.event ||
                           msg.type == MessageType.task) {
                         return _EventTaskCard(
@@ -162,7 +179,7 @@ class _ChatPageState extends State<ChatPage> {
                           onUpdate: _refreshProvidersAfterAIResponse,
                         );
                       }
-        
+
                       if (msg.message.isNotEmpty) {
                         return Align(
                           alignment: msg.type == MessageType.user
@@ -228,7 +245,7 @@ class _ChatPageState extends State<ChatPage> {
                     ),
                   ),
                   SizedBox(width: 8.w),
-        
+
                   // GestureDetector(
                   //   onTap: _isListening ? _stopListening : _startListening,
                   //   child: CircleAvatar(
@@ -241,25 +258,25 @@ class _ChatPageState extends State<ChatPage> {
                   //   ),
                   // ),
                   // SizedBox(width: 8.w),
-        
                   ValueListenableBuilder<TextEditingValue>(
                     valueListenable: _controller,
                     builder: (context, value, child) {
                       final bool isEmpty = value.text.trim().isEmpty;
                       final bool isTyping = context.select<ChatViewModel, bool>(
-                          (vm) => vm.isTyping);
+                        (vm) => vm.isTyping,
+                      );
                       final bool isDisabled = isEmpty || isTyping;
-        
+
                       return GestureDetector(
                         onTap: isDisabled ? null : _sendMessage,
                         child: CircleAvatar(
                           radius: 25.r,
-                          backgroundColor:
-                              isDisabled ? Colors.grey[400] : Colors.green,
+                          backgroundColor: isDisabled
+                              ? Colors.grey[400]
+                              : Colors.green,
                           child: Icon(
                             TablerIcons.send,
-                            color:
-                                isDisabled ? Colors.grey[600] : Colors.white,
+                            color: isDisabled ? Colors.grey[600] : Colors.white,
                           ),
                         ),
                       );
@@ -291,6 +308,7 @@ class _EventTaskCard extends StatefulWidget {
     required this.message,
     required this.onUpdate,
   });
+
   @override
   State<_EventTaskCard> createState() => _EventTaskCardState();
 }
@@ -300,23 +318,43 @@ class _EventTaskCardState extends State<_EventTaskCard> {
   late bool _isExpanded;
   late bool _isEditing;
   late String _selectedReminder;
-  late DateTime _eventTime;
+  DateTime? _eventTime;
   late TextEditingController _titleController;
   late TextEditingController _noteController;
+  String? itemId;
 
   @override
   void initState() {
     super.initState();
-    _callMeController = ValueNotifier<bool>(widget.message.callMe ?? false);
+    _callMeController = ValueNotifier<bool>(widget.message.callMe);
     _isExpanded = false;
     _isEditing = false;
     _selectedReminder = widget.message.notification ?? "At time of event";
-    _eventTime =
-        widget.message.eventTime ?? DateTime.now().add(const Duration(hours: 1));
-    _titleController = TextEditingController(text: widget.message.eventTitle ?? "");
+    _eventTime = widget.message.eventTime;
+    _titleController = TextEditingController(
+      text: widget.message.eventTitle ?? "",
+    );
     _noteController = TextEditingController(text: widget.message.note ?? "");
 
     _callMeController.addListener(_onCallMeChanged);
+
+    if (_callMeController.value) {
+      _scheduleCallReminder(
+        taskId: widget.message.messageId ?? '',
+        taskTitle: _titleController.text.trim(),
+        eventTime: _eventTime!,
+        note: _noteController.text.trim(),
+        itemId: widget.message.itemId ?? '',
+      );
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _EventTaskCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.message.callMe != oldWidget.message.callMe) {
+      _callMeController.value = widget.message.callMe;
+    }
   }
 
   @override
@@ -328,31 +366,36 @@ class _EventTaskCardState extends State<_EventTaskCard> {
     super.dispose();
   }
 
-  void _onCallMeChanged() {
-    setState(() {});
+  void _onCallMeChanged() async {
+    await _saveToBackend();
   }
 
-  void _delayOneHour() {
+  void _delayOneHour() async {
     setState(() {
-      _eventTime = _eventTime.add(const Duration(hours: 1));
+      _eventTime = _eventTime?.add(const Duration(hours: 1));
     });
+
     TopSnackBar.show(
       context,
       message: 'Time delayed by 1 hour',
       backgroundColor: Colors.green,
     );
+
+    await _saveToBackend();
   }
 
-  void _setCallMe() {
+  void _setCallMe() async {
     _callMeController.value = true;
     TopSnackBar.show(
       context,
       message: 'Call reminder enabled',
       backgroundColor: Colors.green,
     );
+
+    await _saveToBackend();
   }
 
-  void _setReminder30Min() {
+  void _setReminder30Min() async {
     setState(() {
       _selectedReminder = "30 minutes before";
     });
@@ -361,21 +404,14 @@ class _EventTaskCardState extends State<_EventTaskCard> {
       message: 'Reminder set to 30 minutes before',
       backgroundColor: Colors.green,
     );
+
+    await _saveToBackend();
   }
 
-  Future<void> _saveChanges() async {
-    setState(() => _isEditing = false);
+  Future<void> _saveToBackend() async {
     final vm = context.read<ChatViewModel>();
-
-    vm.editEventMessage(
-      widget.message,
-      newTitle: _titleController.text.trim(),
-      newTime: _eventTime,
-      newNotification: _selectedReminder,
-      newNote: _noteController.text.trim(),
-    );
-
     final updatedMessage = ChatMessage(
+      itemId: widget.message.itemId,
       message: widget.message.message,
       type: widget.message.type,
       createdAt: widget.message.createdAt,
@@ -388,29 +424,104 @@ class _EventTaskCardState extends State<_EventTaskCard> {
       messageId: widget.message.messageId,
     );
 
+    vm.editEventMessage(
+      widget.message,
+      itemId: widget.message.itemId,
+      newTitle: _titleController.text.trim(),
+      newTime: _eventTime,
+      newNotification: _selectedReminder,
+      newNote: _noteController.text.trim(),
+    );
+
     try {
       await vm.saveEditedMessage(updatedMessage);
-      if (!mounted) return;
-      TopSnackBar.show(
-        context,
-        message: 'Changes saved to database',
-        backgroundColor: Colors.green,
-      );
-      widget.onUpdate();
-    } catch (e) {
-      if (!mounted) return;
-      TopSnackBar.show(
-        context,
-        message: 'Failed to save changes: $e',
-        backgroundColor: Colors.red,
-      );
+
+      if (_callMeController.value) {
+        final taskId =
+            widget.message.messageId ??
+            'temp-${DateTime.now().millisecondsSinceEpoch}';
+
+        _scheduleCallReminder(
+          taskId: taskId,
+          itemId: widget.message.itemId ?? '',
+          taskTitle: _titleController.text.trim(),
+          eventTime: _eventTime!, // ← local time
+          note: _noteController.text.trim(),
+        );
+      }
+    } catch (e, stackTrace) {
+      debugPrint('Failed to save to backend: $e');
+      debugPrint(stackTrace.toString());
+
+      if (!e.toString().toLowerCase().contains("duplicate")) {
+        TopSnackBar.show(
+          context,
+          message: 'Failed to save changes: $e',
+          backgroundColor: Colors.red,
+        );
+      }
     }
+  }
+
+  void _scheduleCallReminder({
+    required String taskId,
+    required String taskTitle,
+    required DateTime eventTime,
+    required String itemId,
+    String? note,
+  }) {
+    final now = DateTime.now();
+    final delay = eventTime.difference(now);
+
+    if (delay.isNegative) {
+      print("Task time already passed. Skipping call reminder.");
+      return;
+    }
+
+    Future.delayed(delay, () async {
+      try {
+        await ReminderCallHelper.showReminderCall(
+          taskId: taskId,
+          itemId: itemId,
+          taskTitle: taskTitle,
+          reminderMessage: note?.isNotEmpty == true
+              ? "$taskTitle. Details: $note"
+              : taskTitle,
+          autoDeclineAfterSeconds: 45,
+        );
+
+        await TtsHelper.speakReminder(taskTitle);
+      } catch (e) {
+        print("Failed to trigger call reminder: $e");
+      }
+    });
+
+    print(
+      "Call reminder scheduled in ${delay.inSeconds} seconds for $taskTitle",
+    );
+  }
+
+  Future<void> _saveChanges() async {
+    setState(() => _isEditing = false);
+    await _saveToBackend();
+
+    TopSnackBar.show(
+      context,
+      message: 'Changes saved to database',
+      backgroundColor: Colors.green,
+    );
+
+    widget.onUpdate();
   }
 
   @override
   Widget build(BuildContext context) {
-    final dateText = DateFormat('EEE, d MMM').format(_eventTime);
-    final timeText = DateFormat('h:mm a').format(_eventTime);
+    final dateText = DateFormat('EEE, d MMM').format(widget.message.eventTime ?? DateTime.now());
+    final timeText = DateFormat('h:mm a').format(widget.message.eventTime ?? DateTime.now());
+    final itemId = widget.message.itemId ?? widget.message.messageId ?? '';
+    
+    print("shahinalam"+itemId);
+
     return GestureDetector(
       onTap: () => setState(() => _isExpanded = !_isExpanded),
       child: Container(
@@ -531,31 +642,33 @@ class _EventTaskCardState extends State<_EventTaskCard> {
                             value: _selectedReminder,
                             dropdownColor: Colors.grey[850],
                             icon: const SizedBox.shrink(),
-                            items: [
-                              "At time of event",
-                              "5 minutes before",
-                              "10 minutes before",
-                              "15 minutes before",
-                              "30 minutes before",
-                              "1 hour before",
-                              "2 hours before",
-                              "13:00, 1 day before",
-                              "None",
-                            ].map((e) {
-                              return DropdownMenuItem(
-                                value: e,
-                                child: Text(
-                                  e,
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 14.sp,
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (val) {
+                            items:
+                                [
+                                  "At time of event",
+                                  "5 minutes before",
+                                  "10 minutes before",
+                                  "15 minutes before",
+                                  "30 minutes before",
+                                  "1 hour before",
+                                  "2 hours before",
+                                  "13:00, 1 day before",
+                                  "None",
+                                ].map((e) {
+                                  return DropdownMenuItem(
+                                    value: e,
+                                    child: Text(
+                                      e,
+                                      style: TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 14.sp,
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                            onChanged: (val) async {
                               if (val != null) {
                                 setState(() => _selectedReminder = val);
+                                await _saveToBackend();
                               }
                             },
                           ),
@@ -633,7 +746,9 @@ class _EventTaskCardState extends State<_EventTaskCard> {
                 children: [
                   IconButton(
                     onPressed: () {
-                      context.read<ChatViewModel>().deleteMessage(widget.message);
+                      context.read<ChatViewModel>().deleteMessage(
+                        widget.message,
+                      );
                       TopSnackBar.show(
                         context,
                         message: 'Item removed from chat',

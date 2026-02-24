@@ -16,7 +16,6 @@ class TaskProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  // Form controllers
   TextEditingController? _titleController;
   TextEditingController? _descriptionController;
   TextEditingController? _startTimeController;
@@ -32,7 +31,6 @@ class TaskProvider extends ChangeNotifier {
   Set<String> get selectedCallReminders => _selectedCallReminders;
   Set<String> get selectedNotificationReminders => _selectedNotificationReminders;
 
-  // ────────────────────── LOAD FROM BACKEND ──────────────────────
   Future<void> loadTasks() async {
     _isLoading = true;
     _error = null;
@@ -52,7 +50,6 @@ class TaskProvider extends ChangeNotifier {
   }
 
 
-  // ────────────────────── SAVE TO BACKEND (PRIVATE) ──────────────────────
   Future<void> _saveToServer(Task task) async {
     try {
       await ApiService().updateTaskOnServer(task);

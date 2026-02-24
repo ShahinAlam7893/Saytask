@@ -1,11 +1,14 @@
+// lib/repository/reminder_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:saytask/core/api_endpoints.dart';
 import 'package:saytask/service/local_storage_service.dart';
 
 class ReminderService {
-  static Future<bool> triggerTestReminderCall({
+  /// Triggers the backend test-call API (sends FCM VoIP notification → call UI + TTS)
+  static Future<bool> triggerReminderCall({
     required String message,
+    String? title, // optional, for logging
   }) async {
     final token = LocalStorageService.token;
     if (token == null) {
@@ -25,17 +28,17 @@ class ReminderService {
         }),
       );
 
-      if (response.statusCode == 200) {
-        print("Test reminder call triggered successfully");
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print("Reminder call triggered successfully → $message");
         final data = jsonDecode(response.body);
-        print("Response: $data");
+        print("API Response: $data");
         return true;
       } else {
-        print("Failed to trigger test call: ${response.statusCode} ${response.body}");
+        print("Failed to trigger call: ${response.statusCode} ${response.body}");
         return false;
       }
     } catch (e) {
-      print("Error triggering test call: $e");
+      print("Error calling test-call API: $e");
       return false;
     }
   }

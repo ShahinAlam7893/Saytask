@@ -21,7 +21,8 @@ class TodayScreen extends StatefulWidget {
   State<TodayScreen> createState() => _TodayScreenState();
 }
 
-class _TodayScreenState extends State<TodayScreen> {
+class _TodayScreenState extends State<TodayScreen>
+    with WidgetsBindingObserver {
   final ScrollController _mainScrollController = ScrollController();
   final ScrollController _scheduleScrollController = ScrollController();
   final ScrollController _timelineScrollController = ScrollController();
@@ -42,28 +43,58 @@ class _TodayScreenState extends State<TodayScreen> {
   String? _previewTime;
   double? _previewTop;
 
+  Timer? _autoCompleteTimer;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this); // Listen to lifecycle
+
     _syncScrollControllers();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final tp = Provider.of<TaskProvider>(context, listen: false);
       final cp = Provider.of<CalendarProvider>(context, listen: false);
       await Future.wait([tp.loadTasks(), cp.loadEvents()]);
-      _autoCheckPastTasks(tp.tasks);
+      _autoCheckPastItems(tp, cp); // Initial check
+      _startAutoCompleteTimer(tp, cp); // Start periodic check
     });
   }
 
-  void _autoCheckPastTasks(List<Task> tasks) {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      // Re-check when app comes back to foreground
+      final tp = Provider.of<TaskProvider>(context, listen: false);
+      final cp = Provider.of<CalendarProvider>(context, listen: false);
+      _autoCheckPastItems(tp, cp);
+    }
+  }
+
+  void _startAutoCompleteTimer(TaskProvider tp, CalendarProvider cp) {
+    _autoCompleteTimer?.cancel();
+    _autoCompleteTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      if (mounted) {
+        _autoCheckPastItems(tp, cp);
+      }
+    });
+  }
+
+  void _autoCheckPastItems(TaskProvider tp, CalendarProvider cp) {
     final now = DateTime.now();
-    for (final task in tasks) {
+
+    for (final task in tp.tasks) {
       final endTime = task.startTime.add(task.duration);
       if (endTime.isBefore(now) && !task.isCompleted) {
-        Provider.of<TaskProvider>(
-          context,
-          listen: false,
-        ).toggleTaskCompletion(task.id);
+        tp.toggleTaskCompletion(task.id);
+      }
+    }
+
+    for (final event in cp.allEvents) {
+      final eventTime = event.eventDateTime ?? DateTime.now();
+      if (eventTime.isBefore(now) && !event.isCompleted) {
+        cp.toggleEventCompletion(event.id);
       }
     }
   }
@@ -83,8 +114,10 @@ class _TodayScreenState extends State<TodayScreen> {
     });
   }
 
-  @override
+@override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _autoCompleteTimer?.cancel();
     _mainScrollController.dispose();
     _scheduleScrollController.dispose();
     _timelineScrollController.dispose();

@@ -5,10 +5,12 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:saytask/main.dart' as TtsHelper;
 import 'package:saytask/model/event_model.dart';
 import 'package:saytask/repository/calendar_service.dart';
 import 'package:saytask/res/color.dart';
 import 'package:saytask/res/components/top_snackbar.dart';
+import 'package:saytask/utils/reminder_call_helper.dart';
 
 class EventEditScreen extends StatefulWidget {
   final Event event;
@@ -163,52 +165,132 @@ class _EventEditScreenState extends State<EventEditScreen> {
         _currentCallMe != widget.event.callMe;
   }
 
-  Future<void> _saveChanges() async {
-    if (_isSaving) return;
 
-    final title = _titleController.text.trim();
-    if (title.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Title cannot be empty')),
-      );
-      return;
-    }
+Future<void> _saveChanges() async {
+  if (_isSaving) return;
 
-    setState(() => _isSaving = true);
-
-    try {
-      final provider = context.read<CalendarProvider>();
-      final updated = widget.event.copyWith(
-        title: title,
-        description: _descriptionController.text.trim(),
-        locationAddress: _locationController.text.trim(),
-        eventDateTime: _selectedDateTime,
-        reminderMinutes: _currentReminderMinutes,
-        callMe: _currentCallMe,
-      );
-
-      await provider.updateItem(widget.event, updated);
-
-      if (mounted) {
-        TopSnackBar.show(
-          context,
-          message: "Event updated successfully",
-          backgroundColor: Colors.green[700]!,
-        );
-        context.pop();
-      }
-    } catch (e) {
-      if (mounted) {
-        TopSnackBar.show(
-          context,
-          message: "Failed to update: $e",
-          backgroundColor: Colors.red[700]!,
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
-    }
+  final title = _titleController.text.trim();
+  if (title.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Title cannot be empty')),
+    );
+    return;
   }
+
+  setState(() => _isSaving = true);
+
+  try {
+    final provider = context.read<CalendarProvider>();
+    final updated = widget.event.copyWith(
+      title: title,
+      description: _descriptionController.text.trim(),
+      locationAddress: _locationController.text.trim(),
+      eventDateTime: _selectedDateTime,
+      reminderMinutes: _currentReminderMinutes,
+      callMe: _currentCallMe,
+    );
+
+    await provider.updateItem(widget.event, updated);
+
+    if (_currentCallMe) {
+      final now = DateTime.now();
+      var delay = _selectedDateTime.difference(now);
+
+      if (delay.isNegative || delay.inSeconds < 10) {
+        delay = Duration.zero;
+        print("Event edit call time passed/close — triggering NOW");
+      }
+
+      Future.delayed(delay, () async {
+        try {
+          final reminderText = _descriptionController.text.trim().isNotEmpty
+              ? "${_titleController.text.trim()}. ${_descriptionController.text.trim()}"
+              : _titleController.text.trim();
+
+          await ReminderCallHelper.showReminderCall(
+            taskId: widget.event.id,
+            itemId: widget.event.id,
+            taskTitle: _titleController.text.trim(),
+            reminderMessage: reminderText,
+            autoDeclineAfterSeconds: 60,
+          );
+
+          await TtsHelper.speakReminder(reminderText);
+          print("Event edit local call TRIGGERED for: ${_titleController.text.trim()} at $_selectedDateTime");
+        } catch (e) {
+          print("Event edit local call failed: $e");
+        }
+      });
+
+      print("Event edit call scheduled locally — delay: ${delay.inMinutes} min for: ${_titleController.text.trim()}");
+    }
+
+    if (mounted) {
+      TopSnackBar.show(
+        context,
+        message: "Event updated successfully",
+        backgroundColor: Colors.green[700]!,
+      );
+      context.pop();
+    }
+  } catch (e) {
+    if (mounted) {
+      TopSnackBar.show(
+        context,
+        message: "Failed to update: $e",
+        backgroundColor: Colors.red[700]!,
+      );
+    }
+  } finally {
+    if (mounted) setState(() => _isSaving = false);
+  }
+}
+  // Future<void> _saveChanges() async {
+  //   if (_isSaving) return;
+
+  //   final title = _titleController.text.trim();
+  //   if (title.isEmpty) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(content: Text('Title cannot be empty')),
+  //     );
+  //     return;
+  //   }
+
+  //   setState(() => _isSaving = true);
+
+  //   try {
+  //     final provider = context.read<CalendarProvider>();
+  //     final updated = widget.event.copyWith(
+  //       title: title,
+  //       description: _descriptionController.text.trim(),
+  //       locationAddress: _locationController.text.trim(),
+  //       eventDateTime: _selectedDateTime,
+  //       reminderMinutes: _currentReminderMinutes,
+  //       callMe: _currentCallMe,
+  //     );
+
+  //     await provider.updateItem(widget.event, updated);
+
+  //     if (mounted) {
+  //       TopSnackBar.show(
+  //         context,
+  //         message: "Event updated successfully",
+  //         backgroundColor: Colors.green[700]!,
+  //       );
+  //       context.pop();
+  //     }
+  //   } catch (e) {
+  //     if (mounted) {
+  //       TopSnackBar.show(
+  //         context,
+  //         message: "Failed to update: $e",
+  //         backgroundColor: Colors.red[700]!,
+  //       );
+  //     }
+  //   } finally {
+  //     if (mounted) setState(() => _isSaving = false);
+  //   }
+  // }
 
   Future<void> _deleteEvent() async {
     final confirm = await showDialog<bool>(
@@ -219,7 +301,7 @@ class _EventEditScreenState extends State<EventEditScreen> {
         content: const Text('This action cannot be undone.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
+            onPressed: () => context.go('/home'),
             child: const Text('Cancel', style: TextStyle(color: AppColors.black)),
           ),
           TextButton(

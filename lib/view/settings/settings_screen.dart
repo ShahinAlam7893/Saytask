@@ -30,6 +30,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final user = authVM.currentUser;
 
     final bool notificationsEnabled = user?.notificationsEnabled ?? true;
+    final bool whatsAppEnabled = user?.whatsAppEnabled ?? true;
 
     return Scaffold(
       backgroundColor: AppColors.white,
@@ -132,8 +133,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
               SizedBox(height: 8.h),
               SettingToggleTile(
                 title: 'Enable WhatsApp Bot',
-                value: whatsappBot,
-                onChanged: (v) => setState(() => whatsappBot = v),
+                value: whatsAppEnabled,
+                onChanged: (bool newValue) async {
+                  
+                  final success = await authVM.updateWhatsAppEnabled(newValue);
+
+                  if (!success && mounted) {
+                    
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Failed to update WhatsApp enabled')),
+                    );
+                  }
+                },
               ),
               SizedBox(height: 8.h),
               SettingToggleTile(

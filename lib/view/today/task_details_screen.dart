@@ -48,9 +48,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       await taskProvider.loadTasks();
 
       final foundTask = taskProvider.tasks.cast<Task?>().firstWhere(
-            (t) => t?.id == widget.taskId,
-            orElse: () => null,
-          );
+        (t) => t?.id == widget.taskId,
+        orElse: () => null,
+      );
 
       if (foundTask == null) {
         setState(() {
@@ -113,7 +113,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
           picked.minute,
         );
         _startTimeController.text = picked.format(context);
-        _endTimeController.text = DateFormat('h:mm a').format(_startTime.add(_task!.duration));
+        _endTimeController.text = DateFormat(
+          'h:mm a',
+        ).format(_startTime.add(_task!.duration));
       });
     }
   }
@@ -163,7 +165,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_outlined),
           onPressed: () async {
-            final hasChanges = _titleController.text != _task!.title ||
+            final hasChanges =
+                _titleController.text != _task!.title ||
                 _descriptionController.text != _task!.description ||
                 !_startTime.isAtSameMomentAs(_task!.startTime);
 
@@ -237,7 +240,10 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                   borderRadius: BorderRadius.circular(10.r),
                   borderSide: const BorderSide(color: Colors.green, width: 2.0),
                 ),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 12.w,
+                  vertical: 10.h,
+                ),
               ),
               cursorColor: Colors.green,
               style: TextStyle(fontSize: 14.sp),
@@ -251,7 +257,10 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                 SizedBox(width: 8.w),
                 Text(
                   'Schedule',
-                  style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -264,7 +273,10 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                     children: [
                       Text(
                         'Start Time',
-                        style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       SizedBox(height: 6.h),
                       GestureDetector(
@@ -275,13 +287,22 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                             decoration: InputDecoration(
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(24.r),
-                                borderSide: const BorderSide(color: Colors.grey, width: 1.5),
+                                borderSide: const BorderSide(
+                                  color: Colors.grey,
+                                  width: 1.5,
+                                ),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(24.r),
-                                borderSide: const BorderSide(color: Colors.green, width: 2.0),
+                                borderSide: const BorderSide(
+                                  color: Colors.green,
+                                  width: 2.0,
+                                ),
                               ),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12.w,
+                                vertical: 10.h,
+                              ),
                             ),
                           ),
                         ),
@@ -296,7 +317,10 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                     children: [
                       Text(
                         'End Time',
-                        style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       SizedBox(height: 6.h),
                       TextField(
@@ -305,13 +329,22 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                         decoration: InputDecoration(
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(24.r),
-                            borderSide: const BorderSide(color: Colors.grey, width: 1.5),
+                            borderSide: const BorderSide(
+                              color: Colors.grey,
+                              width: 1.5,
+                            ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(24.r),
-                            borderSide: const BorderSide(color: Colors.green, width: 2.0),
+                            borderSide: const BorderSide(
+                              color: Colors.green,
+                              width: 2.0,
+                            ),
                           ),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12.w,
+                            vertical: 10.h,
+                          ),
                         ),
                       ),
                     ],
@@ -328,7 +361,10 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                 SizedBox(width: 8.w),
                 Text(
                   'Tags',
-                  style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -345,7 +381,10 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                       ),
                       backgroundColor: tag.backgroundColor,
                       shape: const StadiumBorder(),
-                      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 10.w,
+                        vertical: 4.h,
+                      ),
                     ),
                   )
                   .toList(),
@@ -361,7 +400,11 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               icon: const Icon(Icons.add, color: AppColors.black),
               label: Text(
                 'Add Tag',
-                style: TextStyle(fontSize: 14.sp, color: AppColors.black, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  color: AppColors.black,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               style: TextButton.styleFrom(
                 shape: const StadiumBorder(),
@@ -371,24 +414,23 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
 
             SizedBox(height: 16.h),
 
-            ElevatedButton(
-              onPressed: () async {
-                print("Manually triggering test reminder call...");
-                await ReminderCallHelper.showReminderCall(
-                  taskId: widget.taskId,
-                  itemId: widget.taskId,
-                  taskTitle: "Drink Water Now",
-                  reminderMessage: "Hey SHAHIN, time to hydrate! 💧",
-                  autoDeclineAfterSeconds: 30,
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-              ),
-              child: Text("TEST: Show Reminder Call UI"),
-            ),
-
+            // ElevatedButton(
+            //   onPressed: () async {
+            //     print("Manually triggering test reminder call...");
+            //     await ReminderCallHelper.showReminderCall(
+            //       taskId: widget.taskId,
+            //       itemId: widget.taskId,
+            //       taskTitle: "Drink Water Now",
+            //       reminderMessage: "Hey SHAHIN, time to hydrate! 💧",
+            //       autoDeclineAfterSeconds: 30,
+            //     );
+            //   },
+            //   style: ElevatedButton.styleFrom(
+            //     backgroundColor: Colors.green,
+            //     foregroundColor: Colors.white,
+            //   ),
+            //   child: Text("TEST: Show Reminder Call UI"),
+            // ),
             // Reminders section (unchanged)
             Row(
               children: [
@@ -396,7 +438,10 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                 SizedBox(width: 8.w),
                 Text(
                   'Reminders',
-                  style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -407,14 +452,21 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               child: _task!.reminders.isEmpty
                   ? Text(
                       'No reminders set',
-                      style: TextStyle(fontSize: 14.sp, color: Colors.grey[600], fontStyle: FontStyle.italic),
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        color: Colors.grey[600],
+                        fontStyle: FontStyle.italic,
+                      ),
                     )
                   : Column(
                       children: _task!.reminders.map((r) {
                         final label = _minutesToLabel(r.timeBefore);
                         return Container(
                           margin: EdgeInsets.only(bottom: 8.h),
-                          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 10.w,
+                            vertical: 6.h,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFBFBFB),
                             borderRadius: BorderRadius.circular(32.r),
@@ -439,18 +491,29 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                                   borderRadius: BorderRadius.circular(12.r),
                                 ),
                                 child: IconButton(
-                                  icon: const Icon(Icons.notifications_none, color: Colors.white),
+                                  icon: const Icon(
+                                    Icons.notifications_none,
+                                    color: Colors.white,
+                                  ),
                                   onPressed: () {},
                                 ),
                               ),
                               if (r.shouldCall)
                                 IconButton(
-                                  icon: const Icon(Icons.wifi_calling_3_outlined, color: AppColors.green),
+                                  icon: const Icon(
+                                    Icons.wifi_calling_3_outlined,
+                                    color: AppColors.green,
+                                  ),
                                   onPressed: () {},
                                 ),
                               IconButton(
-                                icon: const Icon(Icons.close, color: Colors.red),
-                                onPressed: () => context.read<TaskProvider>().removeReminderFromTask(_task!.id, label),
+                                icon: const Icon(
+                                  Icons.close,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () => context
+                                    .read<TaskProvider>()
+                                    .removeReminderFromTask(_task!.id, label),
                               ),
                             ],
                           ),
@@ -463,13 +526,20 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               onPressed: () async {
                 final reminder = await _pickReminder(context);
                 if (reminder != null) {
-                  context.read<TaskProvider>().addReminderToTask(_task!.id, reminder);
+                  context.read<TaskProvider>().addReminderToTask(
+                    _task!.id,
+                    reminder,
+                  );
                 }
               },
               icon: const Icon(Icons.add, color: AppColors.black),
               label: Text(
                 'Add Reminder',
-                style: TextStyle(fontSize: 14.sp, color: AppColors.black, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  color: AppColors.black,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               style: TextButton.styleFrom(
                 shape: const StadiumBorder(),
@@ -492,26 +562,41 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context, false),
-                            child: const Text('Cancel', style: TextStyle(color: AppColors.black)),
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(color: AppColors.black),
+                            ),
                           ),
                           TextButton(
                             onPressed: () => Navigator.pop(context, true),
-                            child: const Text('Delete', style: TextStyle(color: AppColors.red)),
+                            child: const Text(
+                              'Delete',
+                              style: TextStyle(color: AppColors.red),
+                            ),
                           ),
                         ],
                       ),
                     );
                     if (confirm == true) {
-                      context.read<TaskProvider>().removeTask(_task!.id);
+                      await context.read<TaskProvider>().removeTask(_task!.id);
                       if (mounted) context.pop();
                     }
                   },
                   icon: const Icon(Icons.delete, color: AppColors.red),
-                  label: Text('Delete', style: TextStyle(fontSize: 14.sp, color: AppColors.black)),
+                  label: Text(
+                    'Delete',
+                    style: TextStyle(fontSize: 14.sp, color: AppColors.black),
+                  ),
                   style: TextButton.styleFrom(
                     shape: const StadiumBorder(),
-                    side: BorderSide(color: AppColors.secondaryTextColor, width: 1),
-                    padding: EdgeInsets.symmetric(horizontal: 50.w, vertical: 8.h),
+                    side: BorderSide(
+                      color: AppColors.secondaryTextColor,
+                      width: 1,
+                    ),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 50.w,
+                      vertical: 8.h,
+                    ),
                   ),
                 ),
                 TextButton.icon(
@@ -519,11 +604,20 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                     _saveTask();
                   },
                   icon: const Icon(Icons.done, color: AppColors.green),
-                  label: Text('Save', style: TextStyle(fontSize: 14.sp, color: AppColors.black)),
+                  label: Text(
+                    'Save',
+                    style: TextStyle(fontSize: 14.sp, color: AppColors.black),
+                  ),
                   style: TextButton.styleFrom(
                     shape: const StadiumBorder(),
-                    side: BorderSide(color: AppColors.secondaryTextColor, width: 1),
-                    padding: EdgeInsets.symmetric(horizontal: 50.w, vertical: 8.h),
+                    side: BorderSide(
+                      color: AppColors.secondaryTextColor,
+                      width: 1,
+                    ),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 50.w,
+                      vertical: 8.h,
+                    ),
                   ),
                 ),
               ],
@@ -534,56 +628,48 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     );
   }
 
-  Future<void> _saveTask() async {
-    final updatedTask = _task!.copyWith(
-      title: _titleController.text.trim(),
-      description: _descriptionController.text.trim(),
-      startTime: _startTime,
-    );
+Future<void> _saveTask() async {
+  final updatedTask = _task!.copyWith(
+    title: _titleController.text.trim(),
+    description: _descriptionController.text.trim(),
+    startTime: _startTime,
+  );
 
-    context.read<TaskProvider>().updateTask(updatedTask);
+  context.read<TaskProvider>().updateTask(updatedTask);
 
-    // ────────────────────────────────────────────────
-    // LOCAL CALL REMINDER SCHEDULING (this is the missing piece)
-    // Same exact logic as your SpeackEventCard
-    // ────────────────────────────────────────────────
-    final hasCallReminder = _task!.reminders.any((r) => r.types.contains("call"));
-    if (hasCallReminder) {
-      final now = DateTime.now();
-      var delay = _startTime.difference(now);
+  setState(() {
+    _task = updatedTask;
+  });
 
-      if (delay.isNegative || delay.inSeconds < 10) {
-        delay = Duration.zero;
-        print("Task edit call time passed/close — triggering NOW");
-      }
+  // ───── Call Reminder Logic (unchanged, now safe) ─────
+  final hasCallReminder =
+      updatedTask.reminders.any((r) => r.types.contains("call"));
 
-      Future.delayed(delay, () async {
-        try {
-          final reminderText = _descriptionController.text.trim().isNotEmpty
+  if (hasCallReminder) {
+    final now = DateTime.now();
+    var delay = _startTime.difference(now);
+    if (delay.isNegative) delay = Duration.zero;
+
+    Future.delayed(delay, () async {
+      final reminderText =
+          _descriptionController.text.trim().isNotEmpty
               ? "${_titleController.text.trim()}. ${_descriptionController.text.trim()}"
               : _titleController.text.trim();
 
-          await ReminderCallHelper.showReminderCall(
-            taskId: widget.taskId,
-            itemId: widget.taskId,
-            taskTitle: _titleController.text.trim(),
-            reminderMessage: reminderText,
-            autoDeclineAfterSeconds: 60,
-          );
+      await ReminderCallHelper.showReminderCall(
+        taskId: widget.taskId,
+        itemId: widget.taskId,
+        taskTitle: _titleController.text.trim(),
+        reminderMessage: reminderText,
+        autoDeclineAfterSeconds: 60,
+      );
 
-          await TtsHelper.speakReminder(reminderText);
-          print("Task edit local call TRIGGERED for: ${_titleController.text.trim()} at $_startTime");
-        } catch (e) {
-          print("Task edit local call failed: $e");
-        }
-      });
-
-      print("Task edit call scheduled locally — delay: ${delay.inMinutes} min for: ${_titleController.text.trim()}");
-    }
-    // ────────────────────────────────────────────────
-
-    if (mounted) context.pop();
+      await TtsHelper.speakReminder(reminderText);
+    });
   }
+
+  if (mounted) context.pop();
+}
 
   Future<Tag?> _pickTag(BuildContext context) async {
     final availableTags = [
@@ -720,5 +806,4 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     if (minutes == 120) return "2 hr before";
     return "$minutes min before";
   }
-
 }

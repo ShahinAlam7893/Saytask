@@ -8,8 +8,9 @@ class UserModel {
   final String? gender;
   final String? dateOfBirth; 
   final String? country;
-  final String? phoneNumber;
+  final String? phone;
   final bool? notificationsEnabled;
+  final bool? whatsAppEnabled;
 
   UserModel({
     required this.userId,
@@ -18,8 +19,9 @@ class UserModel {
     this.gender,
     this.dateOfBirth,
     this.country,
-    this.phoneNumber,
+    this.phone,
     this.notificationsEnabled,
+    this.whatsAppEnabled,
   });
 
   factory UserModel.fromJwt(Map<String, dynamic> decoded) {
@@ -30,10 +32,13 @@ class UserModel {
       gender: decoded['gender'],
       dateOfBirth: decoded['birth_date'] ?? decoded['date_of_birth'],
       country: decoded['country'],
-      phoneNumber: decoded['phone_number'],
+      phone: decoded['phone'],
       notificationsEnabled: decoded['notifications_enabled'] == true || 
                              decoded['notifications_enabled'] == 'true' ||
                              decoded['notifications_enabled'] == '1',
+      whatsAppEnabled: decoded['whatsapp_bot_enabled'] == true || 
+                             decoded['whatsapp_bot_enabled'] == 'true' ||
+                             decoded['whatsapp_bot_enabled'] == '1',
     );
   }
 
@@ -44,7 +49,7 @@ class UserModel {
       "birth_date": dateOfBirth,
       "country": country,
       "notifications_enabled": notificationsEnabled?.toString() ?? 'false',
-      "phone_number": phoneNumber,
+      "phone": phone,
     };
   }
 
@@ -55,8 +60,9 @@ class UserModel {
     String? gender,
     String? dateOfBirth,
     String? country,
-    String? phoneNumber,
+    String? phone,
     bool? notificationsEnabled,
+    bool? whatsAppEnabled,
   }) {
     return UserModel(
       userId: userId ?? this.userId,
@@ -65,8 +71,9 @@ class UserModel {
       gender: gender ?? this.gender,
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       country: country ?? this.country,
-      phoneNumber: phoneNumber ?? this.phoneNumber,
+      phone: phone ?? this.phone,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+      whatsAppEnabled: whatsAppEnabled ?? this.whatsAppEnabled,
     );
   }
 }

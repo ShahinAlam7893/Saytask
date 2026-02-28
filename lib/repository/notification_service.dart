@@ -4,12 +4,14 @@ import 'dart:convert';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter_callkit_incoming/entities/call_event.dart';
+import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:saytask/model/event_model.dart';
+import 'package:saytask/repository/calendar_service.dart';
 import 'package:saytask/utils/reminder_call_helper.dart';
 import 'package:saytask/utils/tts_helper.dart';
-import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:uuid/uuid.dart';
 import '../utils/routes/routes.dart';
 
@@ -32,7 +34,7 @@ class NotificationService {
     'high_importance_channel',
     'Important Notifications',
     description: 'Used for task reminders and alerts',
-    importance: Importance.max, // Raised to max for better visibility
+    importance: Importance.max,
     playSound: true,
   );
 
@@ -151,27 +153,49 @@ class NotificationService {
 
   Future<void> _handleMessage(RemoteMessage message) async {
     final data = message.data;
-    print("Handling FCM message: ${data}");
+    print("Handling FCM: ${data}");
 
     if (data['type'] == 'reminder_call') {
       final taskId = data['task_id'] as String? ?? Uuid().v4();
       final itemId = data['item_id'] as String? ?? Uuid().v4();
       final taskTitle = data['title'] as String? ?? 'Reminder';
       final reminderMessage =
-          data['message'] as String? ?? "It's time for your task";
-      final reminderType =
-          data['reminder_type'] as String? ??
-          'task'; // 'task', 'event', or 'chat'
+          data['message'] as String? ?? "It's time for your reminder";
+      final reminderType = data['reminder_type'] as String? ?? 'task';
 
       await ReminderCallHelper.showReminderCall(
         taskId: taskId,
         taskTitle: taskTitle,
         itemId: itemId,
         reminderMessage: reminderMessage,
-        extra: {'reminder_type': reminderType}, // Pass extra for type
+        extra: {'reminder_type': reminderType},
+      );
+    } else if (data['type'] == 'reminder') {
+      final title =
+          data['title'] as String? ?? message.notification?.title ?? 'Reminder';
+      final body =
+          data['body'] as String? ??
+          message.notification?.body ??
+          'You have a scheduled reminder';
+
+      await _localNotifications.show(
+        message.hashCode,
+        title,
+        body,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            _channel.id,
+            _channel.name,
+            channelDescription: _channel.description,
+            importance: Importance.max,
+            priority: Priority.high,
+            playSound: true,
+          ),
+        ),
+        payload: jsonEncode(data), // ← crucial for tap action
       );
     } else {
-      // Show regular notification
+      // fallback for any other FCM
       final notification = message.notification;
       if (notification != null) {
         await _localNotifications.show(
@@ -222,38 +246,52 @@ class NotificationService {
   }
 
   static void _handlePayload(Map<String, dynamic> data) {
-    print("Handling notification payload: $data");
-
+    print("Notification tapped - payload: $data");
     final context = router.routerDelegate.navigatorKey.currentContext;
     if (context == null) return;
 
     final type = data['type']?.toString();
-    final id = data['id']?.toString();
-    final screen = data['screen']?.toString();
-    final reminderType = data['reminder_type']?.toString();
+    final reminderType = data['reminder_type']?.toString() ?? 'task';
+    final taskId = data['task_id'] as String? ?? data['item_id'] as String?;
+    final itemId = data['item_id'] as String?;
 
-    if (type == 'task' && id != null) {
-      context.go('/task-details/$id');
-    } else if (type == 'note' && id != null) {
-      context.go('/note-details/$id');
-    } else if (type == 'event' && id != null) {
-      context.go('/event-details/$id');
-    } else if (screen == 'home') {
-      context.go('/home');
-    } else if (screen == 'notes') {
-      context.go('/notes');
-    } else if (screen == 'calendar') {
-      context.go('/calendar');
-    } else if (type == 'reminder_call') {
-      // Optional: go to task details when user taps fallback notification
-      final taskId = data['taskId']?.toString();
-      final itemId = data['itemId']?.toString();
+    if (type == 'task' && taskId != null) {
+      context.go('/task-details/$taskId');
+    } else if (type == 'note' && itemId != null) {
+      context.go('/note-details/$itemId');
+    } else if (type == 'event' && itemId != null) {
+      context.go('/event_details', extra: null); // will fallback inside screen
+    }
+    // NEW - Regular reminder push
+    else if (type == 'reminder') {
       if (reminderType == 'task' && taskId != null) {
         context.go('/task-details/$taskId');
       } else if (reminderType == 'event' && itemId != null) {
-        context.go('/event-details/$itemId');
+        // Load from provider so we don't break existing route
+        final provider = context.read<CalendarProvider>();
+        final event = provider.allEvents.firstWhere(
+          (e) => e.id == itemId,
+          orElse: () => Event(id: itemId, title: 'Reminder'),
+        );
+        context.go('/event_details', extra: event);
       } else if (reminderType == 'chat') {
-        context.go('/chat'); // Navigate to chat screen
+        context.go('/chat');
+      } else {
+        context.go('/home');
+      }
+    } else if (type == 'reminder_call') {
+      // existing call tap logic (unchanged)
+      final taskIdCall = data['taskId']?.toString();
+      final itemIdCall = data['itemId']?.toString();
+      if (reminderType == 'task' && taskIdCall != null) {
+        context.go('/task-details/$taskIdCall');
+      } else if (reminderType == 'event' && itemIdCall != null) {
+        final provider = context.read<CalendarProvider>();
+        final event = provider.allEvents.firstWhere(
+          (e) => e.id == itemIdCall,
+          orElse: () => Event(id: itemIdCall, title: 'Reminder'),
+        );
+        context.go('/event_details', extra: event);
       } else {
         context.go('/home');
       }

@@ -279,9 +279,9 @@ Future<UserModel> signInWithApple({required String identity_token}) async {
     if (updatedUser.country != null && updatedUser.country!.isNotEmpty) {
       body["country"] = updatedUser.country;
     }
-    if (updatedUser.phoneNumber != null &&
-        updatedUser.phoneNumber!.isNotEmpty) {
-      body["phone_number"] = updatedUser.phoneNumber;
+    if (updatedUser.phone != null &&
+        updatedUser.phone!.isNotEmpty) {
+      body["phone"] = updatedUser.phone;
     }
 
     body["notifications_enabled"] = updatedUser.notificationsEnabled;
@@ -318,12 +318,33 @@ Future<UserModel> signInWithApple({required String identity_token}) async {
       'Authorization': 'Bearer $token',
     },
     body: jsonEncode({
-      "notifications_enabled": enabled.toString(), // API expects string "true"/"false"
+      "notifications_enabled": enabled.toString(), 
     }),
   );
 
   if (response.statusCode != 200) {
     throw Exception('Failed to update notifications: ${response.body}');
+  }
+}
+
+
+Future<void> updateProfileWhatsAppEnabled(bool enabled) async {
+  final token = LocalStorageService.token;
+  if (token == null) throw Exception("No authentication token");
+
+  final response = await http.patch(
+    Uri.parse('$baseUrl/auth/profile/'),
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    },
+    body: jsonEncode({
+      "Whatsapp_bot_enabled": enabled.toString(),
+    }),
+  );
+
+  if (response.statusCode != 200) {
+    throw Exception('Failed to update WhatsApp enabled: ${response.body}');
   }
 }
 }

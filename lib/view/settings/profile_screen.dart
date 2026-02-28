@@ -21,6 +21,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late final TextEditingController dobController;
   late final TextEditingController emailController;
   late final TextEditingController countryController;
+  late final TextEditingController phoneController;
 
   @override
   void initState() {
@@ -37,6 +38,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     genderController = TextEditingController(text: user?.gender ?? '');
     dobController = TextEditingController(text: user?.dateOfBirth ?? '');
     countryController = TextEditingController(text: user?.country ?? '');
+    phoneController = TextEditingController(text: user?.phone ?? '');
   }
 
   @override
@@ -50,6 +52,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       genderController.text = user.gender ?? '';
       dobController.text = user.dateOfBirth ?? '';
       countryController.text = user.country ?? '';
+      phoneController.text = user.phone ?? '';
     }
   }
 
@@ -60,6 +63,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     dobController.dispose();
     emailController.dispose();
     countryController.dispose();
+    phoneController.dispose();
     super.dispose();
   }
 
@@ -79,7 +83,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       country: countryController.text.trim().isEmpty
           ? null
           : countryController.text.trim(),
-      // phoneNumber: "01993156181", // Add field later if needed
+      phone: phoneController.text.trim().isEmpty
+      ? null
+      : phoneController.text.trim(),
     );
 
     final success = await authVM.updateProfile(updatedUser);
@@ -196,6 +202,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _buildProfileField('Gender', genderController),
               _buildProfileField('Date of Birth', dobController),
               _buildProfileField('Email', emailController),
+              _buildProfileField('Phone', phoneController),
               // _buildProfileField('Country', countryController),
             ],
           ),
@@ -223,7 +230,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           SizedBox(height: 4.h),
 
-          // ------------------- GENDER DROPDOWN ---------------------
           // ------------------- GENDER DROPDOWN ---------------------
           if (isEditing && isGenderField)
             Container(

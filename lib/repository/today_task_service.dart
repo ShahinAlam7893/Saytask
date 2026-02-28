@@ -142,11 +142,32 @@ class TaskProvider extends ChangeNotifier {
     unawaited(_saveToServer(updatedTask));
   }
 
-  void removeTask(String taskId) {
-    _tasks.removeWhere((t) => t.id == taskId);
+
+Future<void> removeTask(String taskId) async {
+  final index = _tasks.indexWhere((t) => t.id == taskId);
+  if (index == -1) return;
+
+  final removedTask = _tasks[index];
+
+  // Optimistic delete
+  _tasks.removeAt(index);
+  notifyListeners();
+
+  try {
+    await ApiService().deleteTaskOnServer(taskId);
+  } catch (e) {
+    // Rollback
+    _tasks.insert(index, removedTask);
     notifyListeners();
-    // Optional: add delete API later
+    rethrow;
   }
+}
+
+  // void removeTask(String taskId) {
+  //   _tasks.removeWhere((t) => t.id == taskId);
+  //   notifyListeners();
+  //   // Optional: add delete API later
+  // }
 
   void addTask(Task task) {
     _tasks.add(task);
@@ -217,17 +238,16 @@ class TaskProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  String _minutesToLabel(int minutes) {
-    if (minutes == 5) return "5 minutes before";
-    if (minutes == 10) return "10 minutes before";
-    if (minutes == 15) return "15 minutes before";
-    if (minutes == 30) return "30 minutes before";
-    if (minutes == 60) return "1 hour before";
-    if (minutes == 120) return "2 hours before";
-    return "$minutes minutes before";
-  }
+String _minutesToLabel(int minutes) {
+  if (minutes == 5) return "5 min before";
+  if (minutes == 10) return "10 min before";
+  if (minutes == 30) return "30 min before";
+  if (minutes == 60) return "1 hr before";
+  if (minutes == 120) return "2 hr before";
+  return "$minutes min before";
+}
 
-  int _labelToMinutes(String label) {
-    return int.tryParse(label.split(' ').first) ?? 0;
-  }
+int _labelToMinutes(String label) {
+  return int.tryParse(label.split(' ').first) ?? 0;
+}
 }

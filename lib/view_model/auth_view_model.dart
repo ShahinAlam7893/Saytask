@@ -271,6 +271,28 @@ Future<bool> updateNotificationsEnabled(bool enabled) async {
   }
 }
 
+Future<bool> updateWhatsAppEnabled(bool enabled) async {
+  isLoading = true;
+  notifyListeners();
+
+  try {
+    await _repository.updateProfileWhatsAppEnabled(enabled);
+    
+    if (currentUser != null) {
+      currentUser = currentUser!.copyWith(whatsAppEnabled: enabled);
+      print('Updated WhatsApp enabled to: ${currentUser!.whatsAppEnabled}');
+    }
+    
+    notifyListeners();
+    return true;
+  } catch (e) {
+    if (kDebugMode) print('Update WhatsApp enabled error: $e');
+    return false;
+  } finally {
+    isLoading = false;
+    notifyListeners();
+  }
+}
 
 
   final _auth = FirebaseAuth.instance;
